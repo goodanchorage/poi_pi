@@ -38,4 +38,5 @@ SET(SRC_MYPLUGIN
 ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_MYPLUGIN})
 
 INCLUDE("cmake/PluginInstall.cmake")
+INCLUDE("cmake/PluginPackage.cmake")
 
