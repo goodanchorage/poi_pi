@@ -1,0 +1,4 @@
+./png2wx.pl -C ../icons.cpp -H ../icons.h -M ICONS_H *.png
+
+toolbar, highlight, and clicked images: 32x32
+anchor icon: 25x25
