@@ -68,9 +68,9 @@ my_plugin_pi::my_plugin_pi(void *ppimgr)
 
 my_plugin_pi::~my_plugin_pi(void)
 {
-      delete _img_my_plugin_pi;
-      delete _img_my_plugin;
-     
+	  delete _img_ga_anchor_cyan_25;
+      delete _img_ga_anchor_cyan_30;
+      delete _img_ga_toolbar_off;
 }
 
 int my_plugin_pi::Init(void)
@@ -91,12 +91,12 @@ int my_plugin_pi::Init(void)
       // Get a pointer to the opencpn display canvas, to use as a parent for the MY_PLUGIN dialog
       m_parent_window = GetOCPNCanvasWindow();
 	  
-	 
+      AddCustomWaypointIcon(_img_ga_anchor_cyan_25, _T("_img_ga_anchor_cyan_25"), _T("Anchorage"));	 
 
 
       //    This PlugIn needs a toolbar icon, so request its insertion if enabled locally
-      m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_my_plugin, _img_my_plugin, wxITEM_CHECK,
-                                                 _("MY_PLUGIN"), _T(""), NULL,
+      m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_toolbar_off, _img_ga_toolbar_off, wxITEM_CHECK,
+                                                 _("GoodAnchorage"), _T(""), NULL,
                                                  MY_PLUGIN_TOOL_POSITION, 0, this);
 			
 		
@@ -141,7 +141,7 @@ int my_plugin_pi::GetPlugInVersionMinor()
 
 wxBitmap *my_plugin_pi::GetPlugInBitmap()
 {
-      return _img_my_plugin_pi;
+      return _img_ga_toolbar_off;
 }
 
 wxString my_plugin_pi::GetCommonName()
