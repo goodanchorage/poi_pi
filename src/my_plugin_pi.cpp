@@ -27,7 +27,7 @@ std::vector<MyMarkerType> markersList;
 
 //---------------------------------------------------------------------------------------------------------
 //
-//    MY_PLUGIN PlugIn Implementation
+//    GoodAnchorage PlugIn Implementation
 //
 //---------------------------------------------------------------------------------------------------------
 
@@ -88,7 +88,7 @@ int my_plugin_pi::Init(void)
 
     
 
-      // Get a pointer to the opencpn display canvas, to use as a parent for the MY_PLUGIN dialog
+      // Get a pointer to the opencpn display canvas, to use as a parent for the GoodAnchorage dialog
       m_parent_window = GetOCPNCanvasWindow();
 	  
       AddCustomWaypointIcon(_img_ga_anchor_cyan_25, _T("_img_ga_anchor_cyan_25"), _T("Anchorage"));	 
@@ -146,33 +146,20 @@ wxBitmap *my_plugin_pi::GetPlugInBitmap()
 
 wxString my_plugin_pi::GetCommonName()
 {
-      return _T("MY_PLUGIN");
+      return _T("GoodAnchorage");
 }
 
 
 wxString my_plugin_pi::GetShortDescription()
 {
-      return _("MY_PLUGIN PlugIn for OpenCPN");
+      return _("GoodAnchorage PlugIn for OpenCPN");
 }
 
 
 wxString my_plugin_pi::GetLongDescription()
 {
-      return _("MY_PLUGIN PlugIn for OpenCPN\n\
-Provides basic MY_PLUGIN file overlay capabilities for several MY_PLUGIN file types\n\
-and a request function to get MY_PLUGIN files by eMail.\n\n\
-Supported MY_PLUGIN data include:\n\
-- wind direction and speed (at 10 m)\n\
-- wind gust\n\
-- surface pressure\n\
-- rainfall\n\
-- cloud cover\n\
-- significant wave height and direction\n\
-- air surface temperature (at 2 m)\n\
-- sea surface temperature\n\
-- surface current direction and speed\n\
-- Convective Available Potential Energy (CAPE)\n\
-- wind, altitude, temperature and relative humidity at 300, 500, 700, 850 hPa." );
+      return _("GoodAnchorage PlugIn for OpenCPN\n\
+Provides access to GoodAnchorage.com data." );
 }
 
 
@@ -434,12 +421,12 @@ void my_plugin_pi::sendRequest(double lat,double lon){
     double m_miny = m_vp.lat_min;
     double m_maxy = m_vp.lat_max;
 	
-	wxMessageBox(
+	/*wxMessageBox(
 	 wxString::Format(wxT("m_minx = %f "),m_minx)+
 	 wxString::Format(wxT("m_maxx = %f "),m_maxx)+
 	 wxString::Format(wxT("m_miny = %f "),m_miny)+
 	 wxString::Format(wxT("m_maxy = %f "),m_maxy)
-	 );
+	 );*/
 	 
 	
 	cleanMarkerList();
@@ -529,7 +516,7 @@ void my_plugin_pi::sendRequest(double lat,double lon){
 	}
 	else
 	{
-		wxMessageBox(_T("Unable to connect!"));
+		wxMessageBox(wxString(_T("Unable to connect! Error code: ")) <<  get.GetError());
 	}
 	 
 	wxDELETE(httpStream);
@@ -799,7 +786,7 @@ void my_plugin_pi::cleanMarkerList(void)
 	m_ActiveMarker = NULL;
 	m_ActiveMyMarker = NULL;
 
-	for(int i = 0; i < markersList.size(); i++)
+	for(unsigned int i = 0; i < markersList.size(); i++)
 	{
 		DeleteSingleWaypoint(  markersList[i].pluginWaitPoint->m_GUID );
 	}
@@ -810,7 +797,7 @@ void my_plugin_pi::cleanMarkerList(void)
 void my_plugin_pi::showMarkerList(void)
 {
 
-	for(int i = 0; i < markersList.size(); i++)
+	for(unsigned int i = 0; i < markersList.size(); i++)
 	{
 		AddSingleWaypoint(  markersList[i].pluginWaitPoint,  true);
 	}
@@ -827,11 +814,11 @@ wxString MyMarkerType::getMarkerTitle(void)
 	wxString result = this->serverTitle 
 	
 	+wxString::Format(wxT(" (%.3f "),this->serverLat)
-	+wxString::Format(wxT(" / %.3f / "),this->serverLon) ;
+	+wxString::Format(wxT(" , %.3f / "),this->serverLon) ;
 	
 	if(this->serverDeep)
 	{
-		result += _T("X deep)");
+		result += _T("deep)");
 	}
 	else
 	{
