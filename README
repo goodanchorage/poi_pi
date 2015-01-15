@@ -1,1 +1,10 @@
 GoodAnchorage.com plug-in for OpenCPN
+
+git clone git@github.com:goodanchorage/goodanchorage_pi.git
+
+Windows:
+cd build
+cmake ..   (or Cmake-gui as per http://opencpn.org/ocpn/compiling_source_windows)
+cmake --build . --config release
+cmake --build . --config debug
+cmake --build . --target package --config release
