@@ -21,9 +21,10 @@
 #include <map>
 #include <string>
 #include <vector>
-
+#include <sqlite/sqlite3.h>
 std::map<std::string,PlugIn_Waypoint*> myMap;
 std::vector<MyMarkerType> markersList;
+sqlite3 *gaDb;
 
 //---------------------------------------------------------------------------------------------------------
 //
@@ -78,7 +79,7 @@ int my_plugin_pi::Init(void)
 	isPlugInActive =false;
 	m_ActiveMarker = NULL;
 	m_ActiveMyMarker = NULL;
-	
+
       AddLocaleCatalog( _T("opencpn-my_plugin_pi") );
 
       
@@ -99,7 +100,14 @@ int my_plugin_pi::Init(void)
                                                  _("GoodAnchorage"), _T(""), NULL,
                                                  MY_PLUGIN_TOOL_POSITION, 0, this);
 			
-		
+      int rc;
+      rc = sqlite3_open("ga_data.db", &gaDb);
+	  if (rc) {
+		  	wxString errmsg;
+		  	errmsg.Printf(wxT("goodanchorage_pi: sqlite3_open failed: %d"), rc);
+		  	wxLogMessage(errmsg);
+	  } else { wxLogMessage(_T("goodanchorage_pi: sqlite3_open success")); }
+
       return (WANTS_OVERLAY_CALLBACK |
               WANTS_OPENGL_OVERLAY_CALLBACK |
               WANTS_CURSOR_LATLON       |
@@ -115,7 +123,7 @@ int my_plugin_pi::Init(void)
 bool my_plugin_pi::DeInit(void)
 {
     cleanMarkerList();
-	
+	sqlite3_close(gaDb);
     return true;
 }
 

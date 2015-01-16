@@ -26,6 +26,7 @@ SET(SRC_MYPLUGIN
       src/my_plugin_pi.cpp
       src/icons.h
       src/icons.cpp
+      src/sqlite/sqlite3.h
 	  src/wx/json_defs.h
 	  src/wx/jsonreader.h
 	  src/wx/jsonval.h
@@ -33,10 +34,10 @@ SET(SRC_MYPLUGIN
 	  src/wxJSON/jsonreader.cpp
 	  src/wxJSON/jsonval.cpp
 	  src/wxJSON/jsonwriter.cpp
-      
     )
 ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_MYPLUGIN})
 
 INCLUDE("cmake/PluginInstall.cmake")
+INCLUDE("cmake/PluginSQLite.cmake")
 INCLUDE("cmake/PluginPackage.cmake")
 
