@@ -99,6 +99,8 @@ public:
 	
 	void cleanMarkerList(void);
 	void showMarkerList(void);
+private:
+	bool _initDb(void);
 };
 
 

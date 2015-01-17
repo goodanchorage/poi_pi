@@ -21,7 +21,13 @@
 #include <map>
 #include <string>
 #include <vector>
+
+// DB related
+#include <wx/dir.h>
+#include <wx/filename.h>
 #include <sqlite/sqlite3.h>
+
+
 std::map<std::string,PlugIn_Waypoint*> myMap;
 std::vector<MyMarkerType> markersList;
 sqlite3 *gaDb;
@@ -82,12 +88,8 @@ int my_plugin_pi::Init(void)
 
       AddLocaleCatalog( _T("opencpn-my_plugin_pi") );
 
-      
-
       //    Get a pointer to the opencpn configuration object
       m_pconfig = GetOCPNConfigObject();
-
-    
 
       // Get a pointer to the opencpn display canvas, to use as a parent for the GoodAnchorage dialog
       m_parent_window = GetOCPNCanvasWindow();
@@ -99,14 +101,11 @@ int my_plugin_pi::Init(void)
       m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_toolbar_off, _img_ga_toolbar_off, wxITEM_CHECK,
                                                  _("GoodAnchorage"), _T(""), NULL,
                                                  MY_PLUGIN_TOOL_POSITION, 0, this);
-			
-      int rc;
-      rc = sqlite3_open("ga_data.db", &gaDb);
-	  if (rc) {
-		  	wxString errmsg;
-		  	errmsg.Printf(wxT("goodanchorage_pi: sqlite3_open failed: %d"), rc);
-		  	wxLogMessage(errmsg);
-	  } else { wxLogMessage(_T("goodanchorage_pi: sqlite3_open success")); }
+
+      if (!_initDb()) {
+		  wxMessageBox(_T("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
+						_T("GoodAnchorage Plugin"), wxICON_ERROR);
+	  }
 
       return (WANTS_OVERLAY_CALLBACK |
               WANTS_OPENGL_OVERLAY_CALLBACK |
@@ -118,6 +117,28 @@ int my_plugin_pi::Init(void)
               WANTS_PLUGIN_MESSAGING    |
               WANTS_MOUSE_EVENTS
             );
+}
+
+bool my_plugin_pi::_initDb(void) {
+	bool success = true;
+	wxString ga_dir = *GetpPrivateApplicationDataLocation();
+	ga_dir.Append(_T("plugins"));
+	ga_dir.Append(wxFileName::GetPathSeparator());
+	ga_dir.Append(_T("goodanchorage"));
+	if (!wxDir::Exists(ga_dir)) { wxFileName::Mkdir(ga_dir); }
+	wxString db_file = ga_dir + wxFileName::GetPathSeparator() + _T("ga_data.db");
+	wxLogMessage(db_file);
+
+	int rc;
+	rc = sqlite3_open(db_file.mb_str(), &gaDb);
+	if (rc) {
+		wxString errmsg;
+		errmsg.Printf(wxT("goodanchorage_pi: sqlite3_open failed: %d"), rc);
+		wxLogMessage(errmsg);
+		success = false;
+	} else { wxLogMessage(_T("goodanchorage_pi: sqlite3_open success")); }
+
+	return success;
 }
 
 bool my_plugin_pi::DeInit(void)
