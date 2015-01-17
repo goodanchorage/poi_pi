@@ -119,8 +119,8 @@ int my_plugin_pi::Init(void)
             );
 }
 
+
 bool my_plugin_pi::_initDb(void) {
-	bool success = true;
 	wxString ga_dir = *GetpPrivateApplicationDataLocation();
 	ga_dir.Append(_T("plugins"));
 	ga_dir.Append(wxFileName::GetPathSeparator());
@@ -129,17 +129,41 @@ bool my_plugin_pi::_initDb(void) {
 	wxString db_file = ga_dir + wxFileName::GetPathSeparator() + _T("ga_data.db");
 	wxLogMessage(db_file);
 
-	int rc;
-	rc = sqlite3_open(db_file.mb_str(), &gaDb);
+	int rc = sqlite3_open(db_file.utf8_str(), &gaDb);
 	if (rc) {
 		wxString errmsg;
 		errmsg.Printf(wxT("goodanchorage_pi: sqlite3_open failed: %d"), rc);
 		wxLogMessage(errmsg);
-		success = false;
-	} else { wxLogMessage(_T("goodanchorage_pi: sqlite3_open success")); }
+		return false;
+	} else {
+		wxLogMessage(_T("goodanchorage_pi: sqlite3_open success"));
 
-	return success;
+		char *errMsg;
+		wxString _errMsg;
+		char *sql = "SELECT id FROM anchor_list LIMIT 1";
+		rc = sqlite3_exec(gaDb, sql, NULL, NULL, &errMsg);
+		if (rc != SQLITE_OK && errMsg != NULL) {
+			_errMsg = wxString::FromUTF8(errMsg);
+			sqlite3_free(errMsg);
+			if (_errMsg.Left(13) == _T("no such table")) {
+				sql =	"CREATE TABLE anchor_point (id integer primary key, "
+				"lat real, lon real, is_deep int, title text, json text, updated integer)";
+				rc = sqlite3_exec(gaDb, sql, NULL, NULL, &errMsg);
+				if (rc != SQLITE_OK) {
+					if (errMsg != NULL) {
+						_errMsg = wxString::FromUTF8(errMsg);
+						sqlite3_free(errMsg);
+						wxMessageBox(_T("Failed to create local storage: ") + _errMsg);
+					}
+					return false;
+				}
+			}
+		}
+	}
+
+	return true;
 }
+
 
 bool my_plugin_pi::DeInit(void)
 {
