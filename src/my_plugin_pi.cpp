@@ -28,9 +28,10 @@
 #include <sqlite/sqlite3.h>
 
 
-std::map<std::string,PlugIn_Waypoint*> myMap;
+//std::map<std::string,PlugIn_Waypoint*> myMap;
 std::vector<MyMarkerType> markersList;
 sqlite3 *gaDb;
+
 
 //---------------------------------------------------------------------------------------------------------
 //
@@ -67,17 +68,15 @@ my_plugin_pi::my_plugin_pi(void *ppimgr)
 {
       // Create the PlugIn icons
       initialize_images();
-	  
-	
 	  isPlugInActive = false;
-     
+	  m_iconpressed = false;
 }
 
 my_plugin_pi::~my_plugin_pi(void)
 {
 	  delete _img_ga_anchor_cyan_25;
       delete _img_ga_anchor_cyan_30;
-      delete _img_ga_toolbar_off;
+      delete _img_ga_toolbar;
 }
 
 int my_plugin_pi::Init(void)
@@ -98,7 +97,7 @@ int my_plugin_pi::Init(void)
 
 
       //    This PlugIn needs a toolbar icon, so request its insertion if enabled locally
-      m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_toolbar_off, _img_ga_toolbar_off, wxITEM_CHECK,
+      m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_toolbar, _img_ga_toolbar, wxITEM_CHECK,
                                                  _("GoodAnchorage"), _T(""), NULL,
                                                  MY_PLUGIN_TOOL_POSITION, 0, this);
 
@@ -113,7 +112,7 @@ int my_plugin_pi::Init(void)
               WANTS_TOOLBAR_CALLBACK    |
               INSTALLS_TOOLBAR_TOOL     |
               WANTS_CONFIG              |
-              WANTS_PREFERENCES         |
+              //WANTS_PREFERENCES         |
               WANTS_PLUGIN_MESSAGING    |
               WANTS_MOUSE_EVENTS
             );
@@ -140,14 +139,17 @@ bool my_plugin_pi::_initDb(void) {
 
 		char *errMsg;
 		wxString _errMsg;
-		char *sql = "SELECT id FROM anchor_list LIMIT 1";
+		char *sql = "SELECT id FROM anchor_point LIMIT 1";
 		rc = sqlite3_exec(gaDb, sql, NULL, NULL, &errMsg);
 		if (rc != SQLITE_OK && errMsg != NULL) {
 			_errMsg = wxString::FromUTF8(errMsg);
 			sqlite3_free(errMsg);
 			if (_errMsg.Left(13) == _T("no such table")) {
-				sql =	"CREATE TABLE anchor_point (id integer primary key, "
-				"lat real, lon real, is_deep int, title text, json text, updated integer)";
+				sql =	"CREATE TABLE anchor_point (id integer primary key not null, "
+				"lat real not null, lon real not null, is_deep int not null, title text not null, "
+				"json text, updated integer)";
+				// json: results of anchor_point call
+				// updated: seconds from 1970 -- wxGetUTCTime()
 				rc = sqlite3_exec(gaDb, sql, NULL, NULL, &errMsg);
 				if (rc != SQLITE_OK) {
 					if (errMsg != NULL) {
@@ -169,6 +171,7 @@ bool my_plugin_pi::DeInit(void)
 {
     cleanMarkerList();
 	sqlite3_close(gaDb);
+	RemovePlugInTool(m_leftclick_tool_id);
     return true;
 }
 
@@ -194,7 +197,7 @@ int my_plugin_pi::GetPlugInVersionMinor()
 
 wxBitmap *my_plugin_pi::GetPlugInBitmap()
 {
-      return _img_ga_toolbar_off;
+      return _img_ga_toolbar;
 }
 
 wxString my_plugin_pi::GetCommonName()
@@ -211,7 +214,7 @@ wxString my_plugin_pi::GetShortDescription()
 
 wxString my_plugin_pi::GetLongDescription()
 {
-      return _("GoodAnchorage PlugIn for OpenCPN\n\
+      return _("GoodAnchorage Plugin for OpenCPN\n\
 Provides access to GoodAnchorage.com data." );
 }
 
@@ -230,8 +233,7 @@ bool my_plugin_pi::MouseEventHook( wxMouseEvent &event )
 {
    if(!isPlugInActive)
 		return false;
-		
-	
+
 	if( event.LeftDClick() && m_ActiveMarker == NULL )
 	{
 		double plat,plon;
@@ -249,8 +251,9 @@ bool my_plugin_pi::MouseEventHook( wxMouseEvent &event )
 		if( event.LeftDClick() )
 		{
 		
-			if(m_ActiveMyMarker !=  NULL)
+			if(m_ActiveMyMarker !=  NULL) {
 				sendRequestPlus(m_ActiveMyMarker->serverId);
+			}
 			
 			return true;
 		}
@@ -278,9 +281,9 @@ void my_plugin_pi::OnToolbarToolCallback(int id)
 {
 	if(isPlugInActive)
 	{
-		 cleanMarkerList();
+		cleanMarkerList();
 		isPlugInActive = false;
-		return ;
+		return;
 	}
 	else
 	{
@@ -312,7 +315,7 @@ void my_plugin_pi::OnToolbarToolCallback(int id)
 	
 	*/
 	
-    RequestRefresh(m_parent_window); // refresh mainn window
+    RequestRefresh(m_parent_window); // refresh main window
 	
 }
 
