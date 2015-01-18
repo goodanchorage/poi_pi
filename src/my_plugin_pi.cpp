@@ -69,7 +69,6 @@ my_plugin_pi::my_plugin_pi(void *ppimgr)
       // Create the PlugIn icons
       initialize_images();
 	  isPlugInActive = false;
-	  m_iconpressed = false;
 }
 
 my_plugin_pi::~my_plugin_pi(void)
