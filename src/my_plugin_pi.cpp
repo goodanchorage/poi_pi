@@ -94,7 +94,7 @@ int my_plugin_pi::Init(void)
       // Get a pointer to the opencpn display canvas, to use as a parent for the GoodAnchorage dialog
       m_parent_window = GetOCPNCanvasWindow();
 	  
-      AddCustomWaypointIcon(_img_ga_anchor_cyan_25, _T("_img_ga_anchor_cyan_25"), _T("Anchorage"));	 
+      AddCustomWaypointIcon(_img_ga_anchor_cyan_25, _T("_img_ga_anchor_cyan_25"), _T("Good Anchorage"));	 
 
 
       //    This PlugIn needs a toolbar icon, so request its insertion if enabled locally
@@ -566,7 +566,7 @@ void my_plugin_pi::sendRequest(double lat,double lon){
 
 				
 				PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( lat_i, lon_i,
-                    _T("icon_ident"), _T("") ,
+                    _T("_img_ga_anchor_cyan_25"), _T("") ,
                       GetNewGUID()  );
 					 
 				newMarker.pluginWaitPoint = bufWayPoint;
