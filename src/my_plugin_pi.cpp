@@ -27,6 +27,7 @@
 #include <wx/filename.h>
 #include <sqlite/sqlite3.h>
 
+#include "icons.h"
 
 //std::map<std::string,PlugIn_Waypoint*> myMap;
 std::vector<MyMarkerType> markersList;
@@ -38,7 +39,6 @@ sqlite3 *gaDb;
 //    GoodAnchorage PlugIn Implementation
 //
 //---------------------------------------------------------------------------------------------------------
-
 
 
 // the class factories, used to create and destroy instances of the PlugIn
@@ -53,8 +53,8 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) {
 }
 
 
+wxWindow        *m_parent_window;
 
-#include "icons.h"
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -80,9 +80,11 @@ my_plugin_pi::~my_plugin_pi(void)
 
 int my_plugin_pi::Init(void)
 {
-	isPlugInActive =false;
+	isPlugInActive = false;
 	m_ActiveMarker = NULL;
 	m_ActiveMyMarker = NULL;
+	// Get a pointer to the opencpn display canvas
+    m_parent_window = GetOCPNCanvasWindow();
 
       AddLocaleCatalog( _T("opencpn-my_plugin_pi") );
 
@@ -236,10 +238,12 @@ bool my_plugin_pi::MouseEventHook( wxMouseEvent &event )
 	if( event.LeftDClick() && m_ActiveMarker == NULL )
 	{
 		double plat,plon;
-		
+
+		wxBeginBusyCursor();
         GetCanvasLLPix( &m_vp, event.GetPosition(), &plat, &plon );
 		//wxMessageBox( wxString::Format(wxT("%f"),plat) + _T(" ") + wxString::Format(wxT("%f"),plon));
 		sendRequest(plat,plon);
+		wxEndBusyCursor();
 		
 		return true;
 	}
@@ -251,7 +255,9 @@ bool my_plugin_pi::MouseEventHook( wxMouseEvent &event )
 		{
 		
 			if(m_ActiveMyMarker !=  NULL) {
+				wxBeginBusyCursor();
 				sendRequestPlus(m_ActiveMyMarker->serverId);
+				wxEndBusyCursor();
 			}
 			
 			return true;
@@ -278,6 +284,12 @@ void my_plugin_pi::ShowPreferencesDialog( wxWindow* parent )
 
 void my_plugin_pi::OnToolbarToolCallback(int id)
 {
+	//m_parent_window->SetCursor(wxCURSOR_CROSS);
+	//m_parent_window->SetCursor( wxCURSOR_WAIT );
+   // m_parent_window->Refresh( true );
+	//wxWindow::SetCursor(wxCURSOR_ARROW);
+	//wxCursor    *pCursorPencil = new wxCursor ( wxCURSOR_ARROW );
+	//m_parent_window->SetCursor(*pCursorPencil);
 	if(isPlugInActive)
 	{
 		cleanMarkerList();
@@ -287,6 +299,7 @@ void my_plugin_pi::OnToolbarToolCallback(int id)
 	else
 	{
 		isPlugInActive = true;
+		//::wxBeginBusyCursor();
 	}
 
 	/*
@@ -315,7 +328,7 @@ void my_plugin_pi::OnToolbarToolCallback(int id)
 	*/
 	
     RequestRefresh(m_parent_window); // refresh main window
-	
+	//m_parent_window->SetCursor(wxCURSOR_CROSS);
 }
 
 
@@ -491,7 +504,7 @@ void my_plugin_pi::sendRequest(double lat,double lon){
 	get.SetTimeout(10); // 10 seconds of timeout instead of 10 minutes ...
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
-	while (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
+	while (!get.Connect(_T("dev.goodanchorage.com")))  // only the server, no pages here yet ...
 		wxSleep(5);
 	 
 	wxApp::IsMainLoopRunning(); // should return true
@@ -564,7 +577,7 @@ void my_plugin_pi::sendRequest(double lat,double lon){
 			
 			
 			showMarkerList();
-			wxMessageBox(_T("OK"));
+			//wxMessageBox(_T("OK"));
 			
 		
 		
@@ -588,7 +601,7 @@ void my_plugin_pi::sendRequestPlus(int id){
 	get.SetTimeout(10); // 10 seconds of timeout instead of 10 minutes ...
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
-	while (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
+	while (!get.Connect(_T("dev.goodanchorage.com")))  // only the server, no pages here yet ...
 		wxSleep(5);
 	 
 	wxApp::IsMainLoopRunning(); // should return true
@@ -652,7 +665,7 @@ void my_plugin_pi::sendRequestPlus(int id){
 				double lon_i = lat_lon[1].AsDouble();
 				
 				forPrint += _T("Anchorage Position: ") 
-					+ wxString::Format(wxT(" %.3f/"),lat_i)
+					+ wxString::Format(wxT(" %.3f  "),lat_i)
 					+ wxString::Format(wxT(" %.3f"),lon_i)
 					+ _T("\n");
 			}
@@ -685,8 +698,15 @@ void my_plugin_pi::sendRequestPlus(int id){
 
 			if( root[_T("depth_m")].IsValid() && !root[_T("depth_m")].IsNull() )
 			{
-				double depth_m = root[_T("depth_m")].AsDouble(); //Depth (m)
+				wxJSONValue depth_m_val = root[_T("depth_m")];
+				double depth_m;
+				if (depth_m_val.IsDouble()) {
+					depth_m = depth_m_val.AsDouble(); //Depth (m)
+				} else {
+					depth_m = depth_m_val.AsInt();
+				}
 				
+
 				forPrint += _T("Depth (m): ") 
 					+ wxString::Format(wxT(" %.1f"),depth_m)
 					+ _T("\n");
@@ -694,10 +714,16 @@ void my_plugin_pi::sendRequestPlus(int id){
 
 			if( root[_T("depth_ft")].IsValid() && !root[_T("depth_ft")].IsNull() )
 			{
-				double depth_ft = root[_T("depth_ft")].AsDouble(); //Depth (ft)
+				wxJSONValue depth_ft_val = root[_T("depth_ft")];
+				double depth_ft;
+				if (depth_ft_val.IsDouble()) {
+					depth_ft = depth_ft_val.AsDouble(); //Depth (ft)
+				} else {
+					depth_ft = depth_ft_val.AsInt();
+				}
 				
 				forPrint += _T("Depth (ft): ") 
-					+ wxString::Format(wxT(" %.1f"),depth_ft)
+					+ wxString::Format(wxT(" %.0f"),depth_ft)
 					+ _T("\n");
 			}
 
@@ -868,8 +894,8 @@ wxString MyMarkerType::getMarkerTitle(void)
 {
 	wxString result = this->serverTitle 
 	
-	+wxString::Format(wxT(" (%.3f "),this->serverLat)
-	+wxString::Format(wxT(" , %.3f / "),this->serverLon) ;
+	+wxString::Format(wxT(" (%.3f"),this->serverLat)
+	+wxString::Format(wxT(", %.3f / "),this->serverLon) ;
 	
 	if(this->serverDeep)
 	{
