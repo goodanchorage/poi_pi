@@ -236,7 +236,7 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
    if(!isPlugInActive)
 		return false;
 
-	if( event.LeftDClick() && m_ActiveMarker == NULL )
+	if( event.LeftUp() && m_ActiveMarker == NULL )
 	{
 		double plat,plon;
 
@@ -248,30 +248,30 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		
 		return true;
 	}
-	else if( m_ActiveMarker != NULL )
+	else if( event.LeftUp() && m_ActiveMarker != NULL )
 	{
 		
 		
-		if( event.LeftDClick() )
-		{
+		//if( event.LeftDClick() )
+		//{
 		
-			if(m_ActiveMyMarker !=  NULL) {
+			//if(m_ActiveMyMarker !=  NULL) {
 				wxBeginBusyCursor();
 				sendRequestPlus(m_ActiveMyMarker->serverId);
 				wxEndBusyCursor();
-			}
+			//}
 			
 			return true;
-		}
+		//}
 		 
-		if( event.RightDown() ) 
-			return true;
+		//if( event.RightDown() ) 
+		//	return true;
 			
-		if( event.LeftDown() )
-			return true;
+		//if( event.LeftDown() )
+		//	return true;
 		
 		
-		return false;
+		//return false;
 	}
 	else
 		return false;
@@ -540,19 +540,16 @@ void goodanchorage_pi::sendRequest(double lat,double lon){
 			
 			
 			for ( int i = 0; i < root.Size(); i++ )  {
-			
+				wxJSONValue lat_lon = root[i][_T("lat_lon")];
+				 
+				if ( !lat_lon.IsArray() ) {
+					wxMessageBox(res);	
+					return ;
+				}
+
 				bool is_deep =  root[i][_T("is_deep")].AsBool();
 				int id = root[i][_T("id")].AsInt();
 				wxString title = root[i][_T("title")].AsString();
-				
-				 wxJSONValue lat_lon = root[i][_T("lat_lon")];
-				 
-				 if ( !lat_lon.IsArray() ) {
-						
-						wxMessageBox(_T("!lat_lon.IsArray()) ") + res);
-						
-						return ;
-				}
 
 				double lat_i = lat_lon[0].AsDouble();
 				double lon_i = lat_lon[1].AsDouble();
@@ -986,7 +983,7 @@ wxString MyMarkerType::getMarkerTitle(void)
 	}
 	else
 	{
-		result += _T("not deep)");
+		result += _T("shallow)");
 	}
 	
 	return result;
