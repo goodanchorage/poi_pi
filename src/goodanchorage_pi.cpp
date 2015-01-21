@@ -15,6 +15,9 @@
 #include <wx/sstream.h>
 #include <wx/protocol/http.h>
 #include <wx/jsonreader.h>
+#include <wx/textfile.h>
+#include <wx/wfstream.h>
+#include <wx/txtstrm.h>
 //////////////////////////////////////////
 
 #include "goodanchorage_pi.h"
@@ -87,6 +90,7 @@ int goodanchorage_pi::Init(void)
 	m_ActiveMyMarker = NULL;
 	// Get a pointer to the opencpn display canvas
     m_parent_window = GetOCPNCanvasWindow();
+	initLoginDialog(m_parent_window);
 
       AddLocaleCatalog( _T("opencpn-goodanchorage_pi") );
 
@@ -308,6 +312,20 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 	}
 	else
 	{
+		wxTextFile file(  _T("my_file.txt")  );
+		/*
+		wxFileInputStream input( _T("my_file.txt") );
+		wxTextInputStream text(input, _T("\x09"), wxConvUTF8 );
+		wxString firstLine=text.ReadLine();
+			
+		if(firstLine.IsNull() || !firstLine.IsEmpty() || firstLine.Length()<2 ) 
+		*/
+		if( !file.Exists() )
+		{
+			file.Close();
+			//loginDialog->Show();//ShowModal
+			loginDialog->ShowModal();
+		}
 		isPlugInActive = true;
 		//::wxBeginBusyCursor();
 	}
@@ -483,14 +501,6 @@ void goodanchorage_pi::SendTimelineMessage(wxDateTime time)
 {
    
 }
-
-
-void goodanchorage_pi::initLoginDialog(wxWindow* parent)
-{
-
-	
-}
-
 
 void goodanchorage_pi::sendRequest(double lat,double lon){
 
@@ -912,13 +922,150 @@ void goodanchorage_pi::sendRequestPlus(int id){
 	}
 	else
 	{
-		wxMessageBox(_T("Unable to connect!"));
+		/*
+        wxString res;
+		wxStringOutputStream out_stream(&res);
+		httpStream->Read(out_stream);
+		*/
+		wxMessageBox( _T("Unable to connect. ")+ 
+			wxString::Format(wxT("Error %d,"),get.GetError())+
+			wxString::Format(wxT("HTTP Code %d"),get.GetResponse())+
+			_T(": ")+
+			getErrorText(get.GetError(),get.GetResponse()) );
 	}
 	 
 	wxDELETE(httpStream);
 	get.Close();
 }
 
+
+void goodanchorage_pi::setServerAuthHeaders(wxHTTP &httpObj)
+{
+
+	wxTextFile file(  _T("my_file.txt")  );
+	if( !file.Exists() )
+	{
+		
+		return;
+	}
+	else
+		file.Close();
+	
+	httpObj.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
+	
+
+	wxFileInputStream input( _T("my_file.txt") );
+	wxTextInputStream text(input, _T("\x09"), wxConvUTF8 );
+	
+	
+		
+		wxString sessid=text.ReadLine();
+		wxString session_name=text.ReadLine();
+		wxString token=text.ReadLine();
+		
+		
+		httpObj.SetHeader(_T("Cookie"),  session_name + _T("=") + sessid );
+		httpObj.SetHeader(_T("X-CSRF-Token"),  token );
+}
+
+
+void CustomDialog::sendRequestAuth(wxString login, wxString password)
+{
+	 wxHTTP http;
+    http.SetHeader(_T("Content-type"), _T("application/json")); 
+    http.SetPostBuffer(_T("{ \"username\":\"") + login + _T("\",\"password\":\"")+ password +_T("\" }")); 
+    http.Connect(_T("dev.goodanchorage.com"));
+    wxInputStream *httpStream = http.GetInputStream(_T("/api/v1/user/login.json"));
+	
+	
+	wxTextFile file( _T("my_file.txt") );
+	file.Open();
+	file.Clear();
+	
+    if (http.GetError() == wxPROTO_NOERR)
+    {
+        wxString res;
+        wxStringOutputStream out_stream(&res);
+        httpStream->Read(out_stream);
+       // wxMessageBox(res);
+		
+	
+	 
+		// construct the JSON root object
+            wxJSONValue  root;
+        // construct a JSON parser
+            wxJSONReader reader;
+
+        // now read the JSON text and store it in the 'root' structure
+        // check for errors before retreiving values...
+            int numErrors = reader.Parse( res, &root );
+            if ( numErrors > 0  )  {
+				
+				wxMessageBox(_T("reader  ERR0R:") + res);
+				
+                return;
+            }
+			
+			
+			if( root[_T("sessid")].IsValid() && !root[_T("sessid")].IsNull() )
+			{
+				wxString sessid = root[_T("sessid")].AsString();	
+
+				file.AddLine( sessid );
+			}
+				
+			if( root[_T("session_name")].IsValid() && !root[_T("session_name")].IsNull() )
+			{
+				wxString session_name = root[_T("session_name")].AsString();
+
+				file.AddLine( session_name );				
+			}
+				
+			if( root[_T("token")].IsValid() && !root[_T("token")].IsNull() )
+			{
+				wxString token = root[_T("token")].AsString();	
+
+				file.AddLine( token );
+			}
+			
+			
+	
+        
+    }
+    else
+    {
+		wxMessageBox( _T("Unable to connect. ")+ 
+			wxString::Format(wxT("Error %d,"),get.GetError())+
+			wxString::Format(wxT("HTTP Code %d"),get.GetResponse())+
+			_T(": ")+
+			getErrorText(get.GetError(),get.GetResponse()) );
+    }
+
+	file.Write();
+	file.Close();
+
+
+    wxDELETE(httpStream);
+    http.Close();
+
+}
+
+wxString getErrorText(int errorID,int codeID)
+{
+	if(errorID == 3 && codeID == 0)
+	{	
+		return _T("Проблемы с интерентом");
+	}
+	else
+	if(errorID == 6 && codeID == 403 )
+	{	
+		return _T("Forbidden);
+	}
+	else
+	{
+		return _T("Неизвестная ошибка");
+	}	
+}
 
 void goodanchorage_pi::_storeMarkerJsonDb(int id, wxString json) {
 	// insert or update while keeping existing values: json and updated
@@ -996,4 +1143,83 @@ wxString MyMarkerType::getMarkerTitle(void)
 	}
 	
 	return result;
+}
+
+void goodanchorage_pi::initLoginDialog(wxWindow* parent)
+{
+
+	loginDialog = new CustomDialog(wxT("CustomDialog"),parent);	
+}
+
+
+CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
+       : wxDialog(parent, -1, title, wxDefaultPosition, wxSize(250, 230))
+{
+
+ 
+
+  wxBoxSizer *verticalBox = new wxBoxSizer(wxVERTICAL);
+  wxBoxSizer *buttonsHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
+  
+  wxBoxSizer *loginHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
+  wxBoxSizer *passwordHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
+
+  wxStaticText *loginTitle = new wxStaticText(this, -1, wxT("Login:"));
+  wxStaticText *passwordTitle = new wxStaticText(this, -1, wxT("password:"));
+  
+   loginTextCtrl = new wxTextCtrl(this, -1);
+   passwordTextCtrl = new wxTextCtrl(this, -1);
+
+  
+  loginHorithontalBox->Add(loginTitle,1);
+  loginHorithontalBox->Add(loginTextCtrl,1, wxLEFT, 5);
+  
+  passwordHorithontalBox->Add(passwordTitle,-1);
+  passwordHorithontalBox->Add(passwordTextCtrl,-1);
+  
+  wxButton *closeButton = new wxButton(this, wxID_EXIT, wxT("Cancel"), 
+      wxDefaultPosition, wxSize(70, 30));
+	  
+  Connect(wxID_EXIT, wxEVT_COMMAND_BUTTON_CLICKED, 
+      wxCommandEventHandler(CustomDialog::onQuit));
+	  
+  
+	  
+  wxButton *okButton = new wxButton(this, LOGIN_BUTTON_ID, wxT("Ok"), 
+      wxDefaultPosition, wxSize(70, 30));
+	  
+	Connect(LOGIN_BUTTON_ID, wxEVT_COMMAND_BUTTON_CLICKED, 
+      wxCommandEventHandler(CustomDialog::onLogin));
+
+	  
+  buttonsHorithontalBox->Add(closeButton, 1);
+  buttonsHorithontalBox->Add(okButton, 1, wxLEFT, 5);
+
+  verticalBox->Add(loginHorithontalBox, 1);
+  verticalBox->Add(passwordHorithontalBox, 1);
+  verticalBox->Add(buttonsHorithontalBox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
+
+  SetSizer(verticalBox);
+
+  
+}
+
+void CustomDialog::onQuit(wxCommandEvent & WXUNUSED(event))
+{
+	//SetToolbarItemState( m_leftclick_tool_id, false );
+    Close(true);
+}
+
+void CustomDialog::onLogin(wxCommandEvent & WXUNUSED(event))
+{
+	//SetToolbarItemState( m_leftclick_tool_id, true );
+	wxString login = loginTextCtrl->GetValue();
+	wxString password = passwordTextCtrl->GetValue();
+	sendRequestAuth(login,password);
+    Close(true);
+}
+
+void CustomDialog::setM_leftclick_tool_id(int m_leftclick_tool_id)
+{
+	this->m_leftclick_tool_id = m_leftclick_tool_id;
 }

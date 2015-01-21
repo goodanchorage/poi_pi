@@ -45,6 +45,24 @@ public:
 	wxString getMarkerTitle(void);
 };
 
+const int LOGIN_BUTTON_ID = 101;
+
+class CustomDialog : public wxDialog
+{
+public:
+
+	int              m_leftclick_tool_id;
+	
+	wxTextCtrl *loginTextCtrl;
+	wxTextCtrl *passwordTextCtrl;
+
+	CustomDialog(const wxString& title,wxWindow* parent);
+	void onQuit(wxCommandEvent & event);
+	void onLogin(wxCommandEvent & event);
+	
+	void setM_leftclick_tool_id(int m_leftclick_tool_id);
+	void sendRequestAuth(wxString login, wxString password);
+};
 
 class goodanchorage_pi : public opencpn_plugin_112
 {
@@ -99,11 +117,16 @@ public:
 	
 	void cleanMarkerList(void);
 	void showMarkerList(void);
+	void setServerAuthHeaders(wxHTTP &httpObj);
+
+	CustomDialog *loginDialog;
 private:
 	bool _initDb(void);
 	void _storeMarkerDb(MyMarkerType);
 	void _storeMarkerJsonDb(int, wxString);
 };
+
+extern "C" DECL_EXP  wxString getErrorText(int errorID,int codeID);
 
 
 
