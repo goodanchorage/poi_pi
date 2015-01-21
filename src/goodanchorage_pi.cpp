@@ -1035,10 +1035,10 @@ void CustomDialog::sendRequestAuth(wxString login, wxString password)
     else
     {
 		wxMessageBox( _T("Unable to connect. ")+ 
-			wxString::Format(wxT("Error %d,"),get.GetError())+
-			wxString::Format(wxT("HTTP Code %d"),get.GetResponse())+
+			wxString::Format(wxT("Error %d,"),http.GetError())+
+			wxString::Format(wxT("HTTP Code %d"),http.GetResponse())+
 			_T(": ")+
-			getErrorText(get.GetError(),get.GetResponse()) );
+			getErrorText(http.GetError(),http.GetResponse()) );
     }
 
 	file.Write();
@@ -1059,7 +1059,7 @@ wxString getErrorText(int errorID,int codeID)
 	else
 	if(errorID == 6 && codeID == 403 )
 	{	
-		return _T("Forbidden);
+		return _T("Forbidden");
 	}
 	else
 	{
@@ -1165,7 +1165,7 @@ CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
   wxBoxSizer *passwordHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
 
   wxStaticText *loginTitle = new wxStaticText(this, -1, wxT("Login:"));
-  wxStaticText *passwordTitle = new wxStaticText(this, -1, wxT("password:"));
+  wxStaticText *passwordTitle = new wxStaticText(this, -1, wxT("Password:"));
   
    loginTextCtrl = new wxTextCtrl(this, -1);
    passwordTextCtrl = new wxTextCtrl(this, -1);
