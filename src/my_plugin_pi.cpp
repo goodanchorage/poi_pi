@@ -44,7 +44,7 @@ sqlite3 *gaDb;
 // the class factories, used to create and destroy instances of the PlugIn
 
 extern "C" DECL_EXP opencpn_plugin* create_pi(void *ppimgr) {
-    return new my_plugin_pi(ppimgr);
+    return new goodanchorage_pi(ppimgr);
 }
 
 
@@ -63,7 +63,7 @@ wxWindow        *m_parent_window;
 //
 //---------------------------------------------------------------------------------------------------------
 
-my_plugin_pi::my_plugin_pi(void *ppimgr)
+goodanchorage_pi::goodanchorage_pi(void *ppimgr)
     :opencpn_plugin_112(ppimgr)
 {
       // Create the PlugIn icons
@@ -71,14 +71,14 @@ my_plugin_pi::my_plugin_pi(void *ppimgr)
 	  isPlugInActive = false;
 }
 
-my_plugin_pi::~my_plugin_pi(void)
+goodanchorage_pi::~goodanchorage_pi(void)
 {
 	  delete _img_ga_anchor_cyan_25;
       delete _img_ga_anchor_cyan_30;
       delete _img_ga_toolbar;
 }
 
-int my_plugin_pi::Init(void)
+int goodanchorage_pi::Init(void)
 {
 	isPlugInActive = false;
 	m_ActiveMarker = NULL;
@@ -86,7 +86,7 @@ int my_plugin_pi::Init(void)
 	// Get a pointer to the opencpn display canvas
     m_parent_window = GetOCPNCanvasWindow();
 
-      AddLocaleCatalog( _T("opencpn-my_plugin_pi") );
+      AddLocaleCatalog( _T("opencpn-goodanchorage_pi") );
 
       //    Get a pointer to the opencpn configuration object
       m_pconfig = GetOCPNConfigObject();
@@ -120,7 +120,7 @@ int my_plugin_pi::Init(void)
 }
 
 
-bool my_plugin_pi::_initDb(void) {
+bool goodanchorage_pi::_initDb(void) {
 	wxString ga_dir = *GetpPrivateApplicationDataLocation();
 	ga_dir.Append(_T("plugins"));
 	ga_dir.Append(wxFileName::GetPathSeparator());
@@ -169,7 +169,7 @@ bool my_plugin_pi::_initDb(void) {
 }
 
 
-bool my_plugin_pi::DeInit(void)
+bool goodanchorage_pi::DeInit(void)
 {
     cleanMarkerList();
 	sqlite3_close(gaDb);
@@ -177,61 +177,61 @@ bool my_plugin_pi::DeInit(void)
     return true;
 }
 
-int my_plugin_pi::GetAPIVersionMajor()
+int goodanchorage_pi::GetAPIVersionMajor()
 {
       return MY_API_VERSION_MAJOR;
 }
 
-int my_plugin_pi::GetAPIVersionMinor()
+int goodanchorage_pi::GetAPIVersionMinor()
 {
       return MY_API_VERSION_MINOR;
 }
 
-int my_plugin_pi::GetPlugInVersionMajor()
+int goodanchorage_pi::GetPlugInVersionMajor()
 {
       return PLUGIN_VERSION_MAJOR;
 }
 
-int my_plugin_pi::GetPlugInVersionMinor()
+int goodanchorage_pi::GetPlugInVersionMinor()
 {
       return PLUGIN_VERSION_MINOR;
 }
 
-wxBitmap *my_plugin_pi::GetPlugInBitmap()
+wxBitmap *goodanchorage_pi::GetPlugInBitmap()
 {
       return _img_ga_toolbar;
 }
 
-wxString my_plugin_pi::GetCommonName()
+wxString goodanchorage_pi::GetCommonName()
 {
       return _T("GoodAnchorage");
 }
 
 
-wxString my_plugin_pi::GetShortDescription()
+wxString goodanchorage_pi::GetShortDescription()
 {
       return _("GoodAnchorage PlugIn for OpenCPN");
 }
 
 
-wxString my_plugin_pi::GetLongDescription()
+wxString goodanchorage_pi::GetLongDescription()
 {
       return _("GoodAnchorage Plugin for OpenCPN\n\
 Provides access to GoodAnchorage.com data." );
 }
 
 
-void my_plugin_pi::SetDefaults(void)
+void goodanchorage_pi::SetDefaults(void)
 {
 }
 
 
-int my_plugin_pi::GetToolbarToolCount(void)
+int goodanchorage_pi::GetToolbarToolCount(void)
 {
       return 1;
 }
 
-bool my_plugin_pi::MouseEventHook( wxMouseEvent &event )
+bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 {
    if(!isPlugInActive)
 		return false;
@@ -278,12 +278,12 @@ bool my_plugin_pi::MouseEventHook( wxMouseEvent &event )
     
 }
 
-void my_plugin_pi::ShowPreferencesDialog( wxWindow* parent )
+void goodanchorage_pi::ShowPreferencesDialog( wxWindow* parent )
 {
     
 }
 
-void my_plugin_pi::OnToolbarToolCallback(int id)
+void goodanchorage_pi::OnToolbarToolCallback(int id)
 {
 	//m_parent_window->SetCursor(wxCURSOR_CROSS);
 	//m_parent_window->SetCursor( wxCURSOR_WAIT );
@@ -334,19 +334,19 @@ void my_plugin_pi::OnToolbarToolCallback(int id)
 
 
 
-bool my_plugin_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
+bool goodanchorage_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
 {
     m_vp = *vp;
     return true;
 }
 
-bool my_plugin_pi::RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp)
+bool goodanchorage_pi::RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp)
 {
     m_vp = *vp;
     return true;
 }
 
-void my_plugin_pi::SetCursorLatLon(double lat, double lon)
+void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 {
 
 
@@ -408,7 +408,7 @@ void my_plugin_pi::SetCursorLatLon(double lat, double lon)
   
 }
 
-bool my_plugin_pi::PointInLLBox( PlugIn_ViewPort *vp, double x, double y )
+bool goodanchorage_pi::PointInLLBox( PlugIn_ViewPort *vp, double x, double y )
 {
     double Marge = 0.;
     double m_minx = vp->lon_min;
@@ -458,32 +458,32 @@ bool my_plugin_pi::PointInLLBox( PlugIn_ViewPort *vp, double x, double y )
 	*/
 }
 
-void my_plugin_pi::OnContextMenuItemCallback(int id)
+void goodanchorage_pi::OnContextMenuItemCallback(int id)
 {
    
 }
 
 
-void my_plugin_pi::SetPluginMessage(wxString &message_id, wxString &message_body)
+void goodanchorage_pi::SetPluginMessage(wxString &message_id, wxString &message_body)
 {
     
 }
 
 
-void my_plugin_pi::SendTimelineMessage(wxDateTime time)
+void goodanchorage_pi::SendTimelineMessage(wxDateTime time)
 {
    
 }
 
 
-void my_plugin_pi::initLoginDialog(wxWindow* parent)
+void goodanchorage_pi::initLoginDialog(wxWindow* parent)
 {
 
 	
 }
 
 
-void my_plugin_pi::sendRequest(double lat,double lon){
+void goodanchorage_pi::sendRequest(double lat,double lon){
 
 	double m_minx = m_vp.lon_min;
     double m_maxx = m_vp.lon_max;
@@ -594,7 +594,7 @@ void my_plugin_pi::sendRequest(double lat,double lon){
 
 
 
-void my_plugin_pi::_storeMarkerDb(MyMarkerType marker) {
+void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 	// insert or update while keeping existing values: json and updated
 	char *sql = "INSERT OR REPLACE INTO anchor_point (id, lat, lon, is_deep, title, json, updated) "
 			"VALUES (?, ?, ?, ?, ?, "
@@ -645,7 +645,7 @@ void my_plugin_pi::_storeMarkerDb(MyMarkerType marker) {
 
 
 
-void my_plugin_pi::sendRequestPlus(int id){
+void goodanchorage_pi::sendRequestPlus(int id){
 	wxHTTP get;
 	get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 	get.SetTimeout(10); // 10 seconds of timeout instead of 10 minutes ...
@@ -914,7 +914,7 @@ void my_plugin_pi::sendRequestPlus(int id){
 }
 
 
-void my_plugin_pi::_storeMarkerJsonDb(int id, wxString json) {
+void goodanchorage_pi::_storeMarkerJsonDb(int id, wxString json) {
 	// insert or update while keeping existing values: json and updated
 	char *sql = "UPDATE anchor_point SET json = ?, updated = ? WHERE id = ?;";
 	sqlite3_stmt *stmt;
@@ -945,7 +945,7 @@ void my_plugin_pi::_storeMarkerJsonDb(int id, wxString json) {
 }
 
 
-void my_plugin_pi::cleanMarkerList(void)
+void goodanchorage_pi::cleanMarkerList(void)
 {
 	m_ActiveMarker = NULL;
 	m_ActiveMyMarker = NULL;
@@ -958,7 +958,7 @@ void my_plugin_pi::cleanMarkerList(void)
 	markersList.clear();
 }
 
-void my_plugin_pi::showMarkerList(void)
+void goodanchorage_pi::showMarkerList(void)
 {
 
 	for(unsigned int i = 0; i < markersList.size(); i++)

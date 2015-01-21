@@ -46,11 +46,11 @@ public:
 };
 
 
-class my_plugin_pi : public opencpn_plugin_112
+class goodanchorage_pi : public opencpn_plugin_112
 {
 public:
-      my_plugin_pi(void *ppimgr);
-      ~my_plugin_pi(void);
+      goodanchorage_pi(void *ppimgr);
+      ~goodanchorage_pi(void);
 
 //    The required PlugIn Methods
       int Init(void);
