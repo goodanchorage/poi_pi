@@ -32,6 +32,7 @@
 //std::map<std::string,PlugIn_Waypoint*> myMap;
 std::vector<MyMarkerType> markersList;
 sqlite3 *gaDb;
+bool m_iconpressed;
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -76,6 +77,7 @@ goodanchorage_pi::~goodanchorage_pi(void)
 	  delete _img_ga_anchor_cyan_25;
       delete _img_ga_anchor_cyan_30;
       delete _img_ga_toolbar;
+	  delete _img_ga_toolbar_on;
 }
 
 int goodanchorage_pi::Init(void)
@@ -99,8 +101,7 @@ int goodanchorage_pi::Init(void)
 
       //    This PlugIn needs a toolbar icon, so request its insertion if enabled locally
       m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_toolbar, _img_ga_toolbar, wxITEM_CHECK,
-                                                 _("GoodAnchorage"), _T(""), NULL,
-                                                 GOODANCHORAGE_TOOL_POSITION, 0, this);
+                            _("GoodAnchorage"), _T(""), NULL, GOODANCHORAGE_TOOL_POSITION, 0, this);
 
       if (!_initDb()) {
 		  wxMessageBox(_T("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
@@ -285,6 +286,12 @@ void goodanchorage_pi::ShowPreferencesDialog( wxWindow* parent )
 
 void goodanchorage_pi::OnToolbarToolCallback(int id)
 {
+	// a hack to overcome unappealing icon shifting done by OCPN by default
+	m_iconpressed = !m_iconpressed;
+	wxBitmap *toolbar_icon = m_iconpressed ?  _img_ga_toolbar_on : _img_ga_toolbar;
+	SetToolbarToolBitmaps(m_leftclick_tool_id, toolbar_icon, toolbar_icon);
+
+	//UpdateSingleWaypoint
 	//wxSetCursor(*wxCROSS_CURSOR);
 	//m_parent_window->SetCursor(wxCursor(wxCURSOR_CROSS));
 	//m_parent_window->SetCursor(wxCURSOR_DEFAULT);
