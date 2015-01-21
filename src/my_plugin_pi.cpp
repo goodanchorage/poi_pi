@@ -129,7 +129,7 @@ bool my_plugin_pi::_initDb(void) {
 	wxString db_file = ga_dir + wxFileName::GetPathSeparator() + _T("ga_data.db");
 	wxLogMessage(db_file);
 
-	int rc = sqlite3_open(db_file.utf8_str(), &gaDb);
+	int rc = sqlite3_open_v2(db_file.utf8_str(), &gaDb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
 	if (rc) {
 		wxString errmsg;
 		errmsg.Printf(wxT("goodanchorage_pi: sqlite3_open failed: %d"), rc);
@@ -148,7 +148,8 @@ bool my_plugin_pi::_initDb(void) {
 			if (_errMsg.Left(13) == _T("no such table")) {
 				sql =	"CREATE TABLE anchor_point (id integer primary key not null, "
 				"lat real not null, lon real not null, is_deep int not null, title text not null, "
-				"json text, updated integer)";
+				"json text, updated integer);"
+				"CREATE INDEX ix_anchor_point_updated ON anchor_point(updated);";
 				// json: results of anchor_point call
 				// updated: seconds from 1970 -- wxGetUTCTime()
 				rc = sqlite3_exec(gaDb, sql, NULL, NULL, &errMsg);
@@ -572,7 +573,7 @@ void my_plugin_pi::sendRequest(double lat,double lon){
 				newMarker.pluginWaitPoint = bufWayPoint;
 				
 				markersList.push_back(newMarker);
-			 
+				_storeMarkerDb(newMarker);
 			}
 			
 			
@@ -592,10 +593,59 @@ void my_plugin_pi::sendRequest(double lat,double lon){
 }
 
 
+
+void my_plugin_pi::_storeMarkerDb(MyMarkerType marker) {
+	// insert or update while keeping existing values: json and updated
+	char *sql = "INSERT OR REPLACE INTO anchor_point (id, lat, lon, is_deep, title, json, updated) "
+			"VALUES (?, ?, ?, ?, ?, "
+			"(SELECT json FROM anchor_point WHERE id = ?), "
+			"(SELECT updated FROM anchor_point WHERE id = ?));";
+	sqlite3_stmt *stmt;
+	if ( sqlite3_prepare(gaDb, sql, -1, &stmt, 0) != SQLITE_OK) {
+		wxMessageBox(_T("Failed prepare to store Anchorage in local storage"));
+		return;
+	}
+
+	if (sqlite3_bind_int(stmt, 1, marker.serverId) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind ID in local storage"));
+		return;
+	}
+	if (sqlite3_bind_double(stmt, 2, marker.serverLat) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind Latitude in local storage"));
+		return;
+	}
+	if (sqlite3_bind_double(stmt, 3, marker.serverLon) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind Longitude in local storage"));
+		return;
+	}
+	if (sqlite3_bind_int(stmt, 4, marker.serverDeep) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind IsDeep in local storage"));
+		return;
+	}
+	if (sqlite3_bind_text(stmt, 5, marker.serverTitle.utf8_str(), marker.serverTitle.length(), 
+			SQLITE_STATIC) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind Title in local storage"));
+		return;
+	}
+	if (sqlite3_bind_int(stmt, 6, marker.serverId) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind ID in local storage"));
+		return;
+	}
+	if (sqlite3_bind_int(stmt, 7, marker.serverId) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind ID in local storage"));
+		return;
+	}
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+		wxMessageBox(_T("Failed to save Anchorage in local storage"));
+		return;
+	}
+
+	return;
+}
+
+
+
 void my_plugin_pi::sendRequestPlus(int id){
-
-	
-
 	wxHTTP get;
 	get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 	get.SetTimeout(10); // 10 seconds of timeout instead of 10 minutes ...
@@ -624,6 +674,7 @@ void my_plugin_pi::sendRequestPlus(int id){
             wxJSONValue  root;
         // construct a JSON parser
             wxJSONReader reader;
+			int id;
 
         // now read the JSON text and store it in the 'root' structure
         // check for errors before retreiving values...
@@ -636,7 +687,7 @@ void my_plugin_pi::sendRequestPlus(int id){
             }
 			
 			if( root[_T("id")].IsValid() && !root[_T("id")].IsNull() )
-				int id = root[_T("id")].AsInt();
+				id = root[_T("id")].AsInt();
 				
 			if( root[_T("title")].IsValid() && !root[_T("title")].IsNull() )
 			{
@@ -851,7 +902,7 @@ void my_plugin_pi::sendRequestPlus(int id){
 			
 			
 			wxMessageBox(forPrint);
-		
+			_storeMarkerJsonDb(id, res);
 	}
 	else
 	{
@@ -861,6 +912,38 @@ void my_plugin_pi::sendRequestPlus(int id){
 	wxDELETE(httpStream);
 	get.Close();
 }
+
+
+void my_plugin_pi::_storeMarkerJsonDb(int id, wxString json) {
+	// insert or update while keeping existing values: json and updated
+	char *sql = "UPDATE anchor_point SET json = ?, updated = ? WHERE id = ?;";
+	sqlite3_stmt *stmt;
+	if ( sqlite3_prepare(gaDb, sql, -1, &stmt, 0) != SQLITE_OK) {
+		wxMessageBox(_T("Failed prepare to update Anchorage in local storage"));
+		return;
+	}
+
+	if (sqlite3_bind_text(stmt, 1, json.utf8_str(), json.length(), SQLITE_STATIC) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind JSON in local storage"));
+		return;
+	}
+	if (sqlite3_bind_int(stmt, 2, wxGetUTCTime()) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind Updated in local storage"));
+		return;
+	}
+	if (sqlite3_bind_int(stmt, 3, id) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind ID in local storage"));
+		return;
+	}
+	
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+		wxMessageBox(_T("Failed to update Anchorage in local storage"));
+		return;
+	}
+
+	return;
+}
+
 
 void my_plugin_pi::cleanMarkerList(void)
 {

@@ -101,6 +101,8 @@ public:
 	void showMarkerList(void);
 private:
 	bool _initDb(void);
+	void _storeMarkerDb(MyMarkerType);
+	void _storeMarkerJsonDb(int, wxString);
 };
 
 
