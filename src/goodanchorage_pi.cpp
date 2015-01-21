@@ -17,7 +17,7 @@
 #include <wx/jsonreader.h>
 //////////////////////////////////////////
 
-#include "my_plugin_pi.h"
+#include "goodanchorage_pi.h"
 #include <map>
 #include <string>
 #include <vector>
