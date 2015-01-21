@@ -22,7 +22,7 @@
 //    The PlugIn Class Definition
 //----------------------------------------------------------------------------------------------------------
 
-#define MY_PLUGIN_TOOL_POSITION    -1          // Request default positioning of toolbar tool
+#define GOODANCHORAGE_TOOL_POSITION    -1          // Request default positioning of toolbar tool
 
 
 

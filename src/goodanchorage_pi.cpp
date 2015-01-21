@@ -100,7 +100,7 @@ int goodanchorage_pi::Init(void)
       //    This PlugIn needs a toolbar icon, so request its insertion if enabled locally
       m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_toolbar, _img_ga_toolbar, wxITEM_CHECK,
                                                  _("GoodAnchorage"), _T(""), NULL,
-                                                 MY_PLUGIN_TOOL_POSITION, 0, this);
+                                                 GOODANCHORAGE_TOOL_POSITION, 0, this);
 
       if (!_initDb()) {
 		  wxMessageBox(_T("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
@@ -285,7 +285,9 @@ void goodanchorage_pi::ShowPreferencesDialog( wxWindow* parent )
 
 void goodanchorage_pi::OnToolbarToolCallback(int id)
 {
-	//m_parent_window->SetCursor(wxCURSOR_CROSS);
+	//wxSetCursor(*wxCROSS_CURSOR);
+	//m_parent_window->SetCursor(wxCursor(wxCURSOR_CROSS));
+	//m_parent_window->SetCursor(wxCURSOR_DEFAULT);
 	//m_parent_window->SetCursor( wxCURSOR_WAIT );
    // m_parent_window->Refresh( true );
 	//wxWindow::SetCursor(wxCURSOR_ARROW);
