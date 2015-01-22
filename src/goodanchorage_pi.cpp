@@ -312,9 +312,9 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 	//m_parent_window->SetCursor(wxCursor(wxCURSOR_CROSS));
 	//m_parent_window->SetCursor(wxCURSOR_DEFAULT);
 	//m_parent_window->SetCursor( wxCURSOR_WAIT );
-   // m_parent_window->Refresh( true );
+	//m_parent_window->Refresh( true );
 	//wxWindow::SetCursor(wxCURSOR_ARROW);
-	//wxCursor    *pCursorPencil = new wxCursor ( wxCURSOR_ARROW );
+	//wxCursor *pCursorPencil = new wxCursor ( wxCURSOR_ARROW );
 	//m_parent_window->SetCursor(*pCursorPencil);
 	if(isPlugInActive)
 	{
@@ -604,12 +604,11 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 				
 				newMarker.serverDeep = is_deep;
 				newMarker.serverId = id;
-				newMarker.serverTitle = title;
-				newMarker.serverPath = path;
+				newMarker.serverTitle = root[i][_T("title")].AsString();
+				newMarker.serverPath = root[i][_T("path")].AsString();
 				newMarker.serverLat = lat_i;
 				newMarker.serverLon = lon_i;
 				
-
 				PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( lat_i, lon_i,
                     _T("_img_ga_anchor"), _T("") ,
                       GetNewGUID()  );
@@ -674,15 +673,12 @@ void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 		sqlite3_finalize(stmt);
 		return;
 	}
-	// TODO: all text fields come out corrupt. Something is wrong here:
-	const char *title = marker.serverTitle.utf8_str();
-	if (sqlite3_bind_text(stmt, 5, title, sizeof(title), SQLITE_STATIC) != SQLITE_OK) {
+	if (sqlite3_bind_text(stmt, 5, strdup(marker.serverTitle.utf8_str()), -1, SQLITE_STATIC) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind Title in local storage"));
 		sqlite3_finalize(stmt);
 		return;
 	}
-	const char *path = marker.serverPath.utf8_str();
-	if (sqlite3_bind_text(stmt, 6, path, sizeof(path), SQLITE_STATIC) != SQLITE_OK) {
+	if (sqlite3_bind_text(stmt, 6, strdup(marker.serverPath.utf8_str()), -1, SQLITE_STATIC) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind Path in local storage"));
 		sqlite3_finalize(stmt);
 		return;
@@ -722,8 +718,8 @@ void goodanchorage_pi::_loadMarkersDb() {
 		newMarker.serverLat = sqlite3_column_double(stmt, 1);
 		newMarker.serverLon = sqlite3_column_double(stmt, 2);
 		newMarker.serverDeep = sqlite3_column_int(stmt, 3) != 0;
-		newMarker.serverTitle = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
-		newMarker.serverPath = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)));
+		newMarker.serverTitle = wxString(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)), wxConvUTF8);
+		newMarker.serverPath = wxString(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)), wxConvUTF8);
 		PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( newMarker.serverLat, 
 				newMarker.serverLon, _T("_img_ga_anchor"), _T(""), GetNewGUID()  );
 		// TODO: not linking???
@@ -1167,8 +1163,7 @@ void goodanchorage_pi::_storeMarkerJsonDb(int id, wxString json) {
 		sqlite3_finalize(stmt);
 		return;
 	}
-
-	if (sqlite3_bind_text(stmt, 1, json.utf8_str(), json.length(), SQLITE_STATIC) != SQLITE_OK) {
+	if (sqlite3_bind_text(stmt, 1, strdup(json.utf8_str()), json.length(), SQLITE_STATIC) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind JSON in local storage"));
 		sqlite3_finalize(stmt);
 		return;
