@@ -37,7 +37,6 @@ std::vector<MyMarkerType> markersList;
 sqlite3 *gaDb;
 bool m_iconpressed;
 
-
 //---------------------------------------------------------------------------------------------------------
 //
 //    GoodAnchorage PlugIn Implementation
@@ -152,7 +151,7 @@ bool goodanchorage_pi::_initDb(void) {
 			if (_errMsg.Left(13) == _T("no such table")) {
 				sql =	"CREATE TABLE anchor_point (id integer primary key not null, "
 				"lat real not null, lon real not null, is_deep int not null, title text not null, "
-				"json text, updated integer);"
+				"path text, json text, updated integer);"
 				"CREATE INDEX ix_anchor_point_updated ON anchor_point(updated);";
 				// json: results of anchor_point call
 				// updated: seconds from 1970 -- wxGetUTCTime()
@@ -432,7 +431,7 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 				m_ActiveMyMarker = &(*it);
                 changeMarkerFlag = true;
 				
-				m_ActiveMyMarker->pluginWaypoint->m_MarkName = m_ActiveMyMarker->getMarkerTitle();
+				//m_ActiveMyMarker->pluginWaypoint->m_MarkName = m_ActiveMyMarker->getMarkerTitle();
 				UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
 				
                 break;
@@ -588,6 +587,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 				bool is_deep =  root[i][_T("is_deep")].AsBool();
 				int id = root[i][_T("id")].AsInt();
 				wxString title = root[i][_T("title")].AsString();
+				wxString path = root[i][_T("path")].AsString();
 
 				double lat_i = lat_lon[0].AsDouble();
 				double lon_i = lat_lon[1].AsDouble();
@@ -597,14 +597,15 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 				newMarker.serverDeep = is_deep;
 				newMarker.serverId = id;
 				newMarker.serverTitle = title;
+				newMarker.serverPath = path;
 				newMarker.serverLat = lat_i;
 				newMarker.serverLon = lon_i;
-
 				
+
 				PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( lat_i, lon_i,
                     _T("_img_ga_anchor_cyan_25"), _T("") ,
                       GetNewGUID()  );
-					 
+				bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
 				newMarker.pluginWaypoint = bufWayPoint;
 				
 				markersList.push_back(newMarker);
@@ -634,8 +635,8 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 
 void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 	// insert or update while keeping existing values: json and updated
-	char *sql = "INSERT OR REPLACE INTO anchor_point (id, lat, lon, is_deep, title, json, updated) "
-			"VALUES (?, ?, ?, ?, ?, "
+	char *sql = "INSERT OR REPLACE INTO anchor_point (id, lat, lon, is_deep, title, path, json, updated) "
+			"VALUES (?, ?, ?, ?, ?, ?, "
 			"(SELECT json FROM anchor_point WHERE id = ?), "
 			"(SELECT updated FROM anchor_point WHERE id = ?));";
 	sqlite3_stmt *stmt;
@@ -665,18 +666,24 @@ void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 		sqlite3_finalize(stmt);
 		return;
 	}
-	if (sqlite3_bind_text(stmt, 5, marker.serverTitle.utf8_str(), marker.serverTitle.length(), 
-			SQLITE_STATIC) != SQLITE_OK) {
+	const char *title = marker.serverTitle.utf8_str();
+	if (sqlite3_bind_text(stmt, 5, title, sizeof(title), SQLITE_STATIC) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind Title in local storage"));
 		sqlite3_finalize(stmt);
 		return;
 	}
-	if (sqlite3_bind_int(stmt, 6, marker.serverId) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind ID in local storage"));
+	const char *path = marker.serverPath.utf8_str();
+	if (sqlite3_bind_text(stmt, 6, path, sizeof(path), SQLITE_STATIC) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind Path in local storage"));
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 7, marker.serverId) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind ID in local storage"));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	if (sqlite3_bind_int(stmt, 8, marker.serverId) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind ID in local storage"));
 		sqlite3_finalize(stmt);
 		return;
@@ -692,7 +699,7 @@ void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 
 void goodanchorage_pi::_loadMarkersDb() {
 	// load them all -- don't worry about lat/lon for this version
-	char *sql = "SELECT id, lat, lon, is_deep, title FROM anchor_point;";
+	char *sql = "SELECT id, lat, lon, is_deep, title, path FROM anchor_point;";
 	sqlite3_stmt *stmt;
 	int rc = sqlite3_prepare_v2(gaDb, sql, -1, &stmt, 0);
 	if( rc != SQLITE_OK ){
@@ -707,8 +714,20 @@ void goodanchorage_pi::_loadMarkersDb() {
 		newMarker.serverLon = sqlite3_column_double(stmt, 2);
 		newMarker.serverDeep = sqlite3_column_int(stmt, 3) != 0;
 		newMarker.serverTitle = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
+		newMarker.serverPath = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)));
 		PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( newMarker.serverLat, 
 				newMarker.serverLon, _T("_img_ga_anchor_cyan_25"), _T(""), GetNewGUID()  );
+		// TODO: not linking???
+		if (!newMarker.serverPath.IsNull()) {
+			Plugin_Hyperlink *plink = new Plugin_Hyperlink;
+			plink->DescrText = wxEmptyString;
+			plink->Link = _T("http://goodanchorage.com") + newMarker.serverPath;
+			plink->Type = wxEmptyString;
+			//bufWayPoint->m_HyperlinkList = new Plugin_HyperlinkList;
+			//bufWayPoint->m_HyperlinkList->Insert(plink);
+		}
+
+		bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
 		newMarker.pluginWaypoint = bufWayPoint;
 		markersList.push_back(newMarker);
     }

@@ -41,6 +41,7 @@ public:
 	int serverId;
 	
 	wxString serverTitle;
+	wxString serverPath;
 	
 	wxString getMarkerTitle(void);
 };
