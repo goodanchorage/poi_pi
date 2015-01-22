@@ -249,7 +249,7 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		//wxMessageBox( wxString::Format(wxT("%f"),plat) + _T(" ") + wxString::Format(wxT("%f"),plon));
 		if (m_isOnline) {
 			if (!sendRequest(plat,plon)) m_isOnline = false;
-			wxMessageBox("Switching to OFFLINE mode. Click on the map to load locally stored data.");
+			wxMessageBox(_T("Switching to OFFLINE mode. Click on the map to load locally stored data."));
 		} else {
 			_loadMarkersDb();
 			showMarkerList();
