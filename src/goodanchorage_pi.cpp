@@ -76,7 +76,7 @@ goodanchorage_pi::goodanchorage_pi(void *ppimgr)
 
 goodanchorage_pi::~goodanchorage_pi(void)
 {
-	  delete _img_ga_anchor_cyan_25;
+	  delete _img_ga_anchor;
       delete _img_ga_toolbar;
 	  delete _img_ga_toolbar_on;
 }
@@ -98,7 +98,7 @@ int goodanchorage_pi::Init(void)
       // Get a pointer to the opencpn display canvas, to use as a parent for the GoodAnchorage dialog
       m_parent_window = GetOCPNCanvasWindow();
 	  
-      AddCustomWaypointIcon(_img_ga_anchor_cyan_25, _T("_img_ga_anchor_cyan_25"), _T("Good Anchorage"));	 
+      AddCustomWaypointIcon(_img_ga_anchor, _T("_img_ga_anchor"), _T("Good Anchorage"));	 
 
 
       //    This PlugIn needs a toolbar icon, so request its insertion if enabled locally
@@ -606,7 +606,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 				
 
 				PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( lat_i, lon_i,
-                    _T("_img_ga_anchor_cyan_25"), _T("") ,
+                    _T("_img_ga_anchor"), _T("") ,
                       GetNewGUID()  );
 				//bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
 				newMarker.pluginWaypoint = bufWayPoint;
@@ -720,7 +720,7 @@ void goodanchorage_pi::_loadMarkersDb() {
 		newMarker.serverTitle = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
 		newMarker.serverPath = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)));
 		PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( newMarker.serverLat, 
-				newMarker.serverLon, _T("_img_ga_anchor_cyan_25"), _T(""), GetNewGUID()  );
+				newMarker.serverLon, _T("_img_ga_anchor"), _T(""), GetNewGUID()  );
 		// TODO: not linking???
 		if (!newMarker.serverPath.IsNull()) {
 			Plugin_Hyperlink *plink = new Plugin_Hyperlink;
