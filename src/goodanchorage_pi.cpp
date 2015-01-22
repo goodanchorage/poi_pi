@@ -263,6 +263,7 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 	// load marker details before showing the dialog
 	else if ((event.LeftDClick() || event.RightDown()) && m_ActiveMarker != NULL )
 	{
+		//TODO: change request from LeftDClick to MouseOver or alter waypoint dialog to load inside
 		wxBeginBusyCursor();
 		wxString details;
 		if (m_isOnline) {
@@ -335,6 +336,8 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 		get.Close();
 
 		if (m_isOnline) {
+			//TODO: move file to local storage
+			// handle a case when the file is empty yet no login dialog comes up
 			wxTextFile file(  _T("my_file.txt")  );
 			/*
 			wxFileInputStream input( _T("my_file.txt") );
@@ -1283,7 +1286,7 @@ CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
   
   wxBoxSizer *loginHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
   wxBoxSizer *passwordHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
-
+  //TODO: add Register link to the dialog
   wxStaticText *loginTitle = new wxStaticText(this, -1, wxT("Login:"));
   wxStaticText *passwordTitle = new wxStaticText(this, -1, wxT("Password:"));
   
@@ -1315,7 +1318,7 @@ CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
   verticalBox->Add(loginHorithontalBox, 1);
   verticalBox->Add(passwordHorithontalBox, 1);
   verticalBox->Add(buttonsHorithontalBox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
-
+ 
   SetSizer(verticalBox);
 
   
