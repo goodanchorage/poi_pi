@@ -1144,6 +1144,7 @@ wxString getErrorText(int errorID,int codeID)
 {
 	if(errorID == 3 && codeID == 0)
 	{	
+		//TODO: translate errors
 		return _T("Проблемы с интерентом");
 	}
 	else
