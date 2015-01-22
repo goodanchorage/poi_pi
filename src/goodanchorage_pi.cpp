@@ -540,6 +540,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 	wxHTTP get;
 	get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 	get.SetTimeout(10); // 10 seconds of timeout instead of 10 minutes ...
+	setServerAuthHeaders(get);
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
 	while (!get.Connect(_T("dev.goodanchorage.com")))  // only the server, no pages here yet ...
@@ -743,6 +744,7 @@ bool goodanchorage_pi::sendRequestPlus(int id){
 	wxHTTP get;
 	get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 	get.SetTimeout(10); // 10 seconds of timeout instead of 10 minutes ...
+	setServerAuthHeaders(get);
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
 	while (!get.Connect(_T("dev.goodanchorage.com")))  // only the server, no pages here yet ...
@@ -1117,8 +1119,8 @@ void CustomDialog::sendRequestAuth(wxString login, wxString password)
     else
     {
 		wxMessageBox( _T("Unable to connect. ")+ 
-			wxString::Format(wxT("Error %d,"),http.GetError())+
-			wxString::Format(wxT("HTTP Code %d"),http.GetResponse())+
+			wxString::Format(wxT("Error %d\n"),http.GetError())+
+			wxString::Format(wxT("HTTP %d"),http.GetResponse())+
 			_T(": ")+
 			getErrorText(http.GetError(),http.GetResponse()) );
     }
