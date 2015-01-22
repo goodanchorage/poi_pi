@@ -669,6 +669,7 @@ void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 		sqlite3_finalize(stmt);
 		return;
 	}
+	// TODO: all text fields come out corrupt. Something is wrong here:
 	const char *title = marker.serverTitle.utf8_str();
 	if (sqlite3_bind_text(stmt, 5, title, sizeof(title), SQLITE_STATIC) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind Title in local storage"));
