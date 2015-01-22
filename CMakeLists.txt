@@ -21,7 +21,7 @@ SET(VERSION_MINOR "1")
 
 INCLUDE("cmake/PluginConfigure.cmake")
 
-SET(SRC_MYPLUGIN
+SET(SRC_GOODANCHORAGEPLUGIN
       src/goodanchorage_pi.h
       src/goodanchorage_pi.cpp
       src/icons.h
@@ -35,7 +35,7 @@ SET(SRC_MYPLUGIN
 	  src/wxJSON/jsonval.cpp
 	  src/wxJSON/jsonwriter.cpp
     )
-ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_MYPLUGIN})
+ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_GOODANCHORAGEPLUGIN})
 
 INCLUDE("cmake/PluginInstall.cmake")
 INCLUDE("cmake/PluginSQLite.cmake")
