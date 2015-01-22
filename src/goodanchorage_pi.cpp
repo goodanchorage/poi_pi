@@ -279,9 +279,14 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 				details = _T("No locally stored data available for this anchorage.");
 			}
 		}
-		// TODO: Crashes somewhere here.
-		m_ActiveMyMarker->pluginWaypoint->m_MarkDescription = details;
-		UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
+		// TODO: Crashes somewhere here. Null pointer?
+		// Looks like either m_ActiveMyMarker is not found fast enough or 
+		// network request takes to long to load between the clicks.
+		// Works a bit better with right-click than double-clik.
+		if (m_ActiveMyMarker) {
+			m_ActiveMyMarker->pluginWaypoint->m_MarkDescription = details;
+			UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
+		}
 		wxEndBusyCursor();
 			
 		return false;	// allow event propagation -- we want to see marker dialog
