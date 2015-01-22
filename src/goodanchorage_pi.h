@@ -104,7 +104,7 @@ public:
 	  PlugIn_ViewPort  m_vp;
 	  
 	  bool sendRequest(double lat,double lon);
-	  bool sendRequestPlus(int id);
+	  wxString sendRequestPlus(int id);
 	  
 	
 	  

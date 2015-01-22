@@ -264,22 +264,24 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 	else if ((event.LeftDClick() || event.RightDown()) && m_ActiveMarker != NULL )
 	{
 		wxBeginBusyCursor();
+		wxString details;
 		if (m_isOnline) {
-			if (!sendRequestPlus(m_ActiveMyMarker->serverId)) {
+			details = sendRequestPlus(m_ActiveMyMarker->serverId);
+			if (details.IsNull()) {
+				details = wxEmptyString;
 				m_isOnline = false;
-				wxMessageBox(_T("Switching to OFFLINE mode.\nClick on the marker to load locally stored data."));
+				wxMessageBox(_T("Switching to OFFLINE mode."));
 			}
 		} else {
 			// TODO: instead of JSON return a marker text ready for display
-			// Refactor sendRequestPlus to do the same
-			// Add a new method to show marker details from either of the two calls
-			wxString details = _loadMarkerDetailsDb(m_ActiveMyMarker->serverId);
-			if (!details.IsNull()) {
+			details = _loadMarkerDetailsDb(m_ActiveMyMarker->serverId);
+			if (details.IsNull()) {
 				details = _T("No locally stored data available for this anchorage.");
 			}
-			m_ActiveMyMarker->pluginWaypoint->m_MarkDescription = details;
-			UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
 		}
+		// TODO: Crashes somewhere here.
+		m_ActiveMyMarker->pluginWaypoint->m_MarkDescription = details;
+		UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
 		wxEndBusyCursor();
 			
 		return false;	// allow event propagation -- we want to see marker dialog
@@ -431,7 +433,7 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 				m_ActiveMyMarker = &(*it);
                 changeMarkerFlag = true;
 				
-				//m_ActiveMyMarker->pluginWaypoint->m_MarkName = m_ActiveMyMarker->getMarkerTitle();
+				m_ActiveMyMarker->pluginWaypoint->m_MarkName = m_ActiveMyMarker->getMarkerTitle();
 				UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
 				
                 break;
@@ -606,7 +608,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 				PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( lat_i, lon_i,
                     _T("_img_ga_anchor_cyan_25"), _T("") ,
                       GetNewGUID()  );
-				bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
+				//bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
 				newMarker.pluginWaypoint = bufWayPoint;
 				
 				markersList.push_back(newMarker);
@@ -728,7 +730,7 @@ void goodanchorage_pi::_loadMarkersDb() {
 			//bufWayPoint->m_HyperlinkList->Insert(plink);
 		}
 
-		bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
+		//bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
 		newMarker.pluginWaypoint = bufWayPoint;
 		markersList.push_back(newMarker);
     }
@@ -739,8 +741,8 @@ void goodanchorage_pi::_loadMarkersDb() {
 
 
 
-bool goodanchorage_pi::sendRequestPlus(int id){
-	bool isLoaded;
+wxString goodanchorage_pi::sendRequestPlus(int id){
+	wxString details;
 	wxHTTP get;
 	get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 	get.SetTimeout(10); // 10 seconds of timeout instead of 10 minutes ...
@@ -779,7 +781,7 @@ bool goodanchorage_pi::sendRequestPlus(int id){
 				
 				wxMessageBox(_T("!root.IsArray() ") + res);
 				
-                return false;
+                return details;
             }
 			
 			if( root[_T("id")].IsValid() && !root[_T("id")].IsNull() )
@@ -805,7 +807,7 @@ bool goodanchorage_pi::sendRequestPlus(int id){
 				if ( !lat_lon.IsArray() ) 
 				{					
 					wxMessageBox(_T("!lat_lon.IsArray()) ") + res);						
-					return false;
+					return details;
 				}
 
 				double lat_i = lat_lon[0].AsDouble();
@@ -824,7 +826,7 @@ bool goodanchorage_pi::sendRequestPlus(int id){
 				if ( !wp_lat_lon.IsArray() ) 
 				{					
 					wxMessageBox(_T("!wp_lat_lon.IsArray()) ") + res);						
-					return false;
+					return details;
 				}
 				
 				forPrint += _T("Safe Waypoint(s): ") ;
@@ -997,9 +999,9 @@ bool goodanchorage_pi::sendRequestPlus(int id){
 			
 			
 			
-			wxMessageBox(forPrint);
+			//wxMessageBox(forPrint);
+			details = forPrint;
 			_storeMarkerJsonDb(id, res);
-			isLoaded = true;
 	}
 	else
 	{
@@ -1013,13 +1015,12 @@ bool goodanchorage_pi::sendRequestPlus(int id){
 			wxString::Format(wxT("HTTP Code %d"),get.GetResponse())+
 			_T(": ")+
 			getErrorText(get.GetError(),get.GetResponse()) );
-		isLoaded = false;
 	}
 	 
 	wxDELETE(httpStream);
 	get.Close();
 
-	return isLoaded;
+	return details;
 }
 
 
@@ -1295,23 +1296,20 @@ CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
   passwordHorithontalBox->Add(passwordTitle,-1);
   passwordHorithontalBox->Add(passwordTextCtrl,-1);
   
+  wxButton *okButton = new wxButton(this, LOGIN_BUTTON_ID, wxT("Ok"), 
+      wxDefaultPosition, wxSize(70, 30));
+	  
+  Connect(LOGIN_BUTTON_ID, wxEVT_COMMAND_BUTTON_CLICKED, 
+      wxCommandEventHandler(CustomDialog::onLogin));
+
   wxButton *closeButton = new wxButton(this, wxID_EXIT, wxT("Cancel"), 
       wxDefaultPosition, wxSize(70, 30));
 	  
   Connect(wxID_EXIT, wxEVT_COMMAND_BUTTON_CLICKED, 
       wxCommandEventHandler(CustomDialog::onQuit));
 	  
-  
-	  
-  wxButton *okButton = new wxButton(this, LOGIN_BUTTON_ID, wxT("Ok"), 
-      wxDefaultPosition, wxSize(70, 30));
-	  
-	Connect(LOGIN_BUTTON_ID, wxEVT_COMMAND_BUTTON_CLICKED, 
-      wxCommandEventHandler(CustomDialog::onLogin));
-
-	  
-  buttonsHorithontalBox->Add(closeButton, 1);
-  buttonsHorithontalBox->Add(okButton, 1, wxLEFT, 5);
+  buttonsHorithontalBox->Add(okButton, 1);
+  buttonsHorithontalBox->Add(closeButton, 1, wxLEFT, 5);
 
   verticalBox->Add(loginHorithontalBox, 1);
   verticalBox->Add(passwordHorithontalBox, 1);
