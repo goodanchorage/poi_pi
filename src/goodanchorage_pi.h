@@ -102,8 +102,8 @@ public:
 	  int              m_leftclick_tool_id;
 	  PlugIn_ViewPort  m_vp;
 	  
-	  void sendRequest(double lat,double lon);
-	  void sendRequestPlus(int id);
+	  bool sendRequest(double lat,double lon);
+	  bool sendRequestPlus(int id);
 	  
 	
 	  
@@ -121,9 +121,12 @@ public:
 
 	CustomDialog *loginDialog;
 private:
+	bool m_isOnline;
+
 	bool _initDb(void);
 	void _storeMarkerDb(MyMarkerType);
 	void _storeMarkerJsonDb(int, wxString);
+	void _loadMarkersDb();
 };
 
 extern "C" DECL_EXP  wxString getErrorText(int errorID,int codeID);

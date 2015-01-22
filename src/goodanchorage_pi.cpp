@@ -78,7 +78,6 @@ goodanchorage_pi::goodanchorage_pi(void *ppimgr)
 goodanchorage_pi::~goodanchorage_pi(void)
 {
 	  delete _img_ga_anchor_cyan_25;
-      delete _img_ga_anchor_cyan_30;
       delete _img_ga_toolbar;
 	  delete _img_ga_toolbar_on;
 }
@@ -248,7 +247,13 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		wxBeginBusyCursor();
         GetCanvasLLPix( &m_vp, event.GetPosition(), &plat, &plon );
 		//wxMessageBox( wxString::Format(wxT("%f"),plat) + _T(" ") + wxString::Format(wxT("%f"),plon));
-		sendRequest(plat,plon);
+		if (m_isOnline) {
+			if (!sendRequest(plat,plon)) m_isOnline = false;
+			wxMessageBox("Switching to OFFLINE mode. Click on the map to load locally stored data.");
+		} else {
+			_loadMarkersDb();
+			showMarkerList();
+		}
 		wxEndBusyCursor();
 		
 		return true;
@@ -295,7 +300,6 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 	wxBitmap *toolbar_icon = m_iconpressed ?  _img_ga_toolbar_on : _img_ga_toolbar;
 	SetToolbarToolBitmaps(m_leftclick_tool_id, toolbar_icon, toolbar_icon);
 
-	//UpdateSingleWaypoint
 	//wxSetCursor(*wxCROSS_CURSOR);
 	//m_parent_window->SetCursor(wxCursor(wxCURSOR_CROSS));
 	//m_parent_window->SetCursor(wxCURSOR_DEFAULT);
@@ -312,20 +316,33 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 	}
 	else
 	{
-		wxTextFile file(  _T("my_file.txt")  );
-		/*
-		wxFileInputStream input( _T("my_file.txt") );
-		wxTextInputStream text(input, _T("\x09"), wxConvUTF8 );
-		wxString firstLine=text.ReadLine();
+		// check network first
+		wxHTTP get;
+		get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
+		get.SetTimeout(10);
+		while (!get.Connect(_T("dev.goodanchorage.com")))
+			wxSleep(5);
+	 
+		m_isOnline = wxApp::IsMainLoopRunning(); // should return true
+		get.Close();
+
+		if (m_isOnline) {
+			wxTextFile file(  _T("my_file.txt")  );
+			/*
+			wxFileInputStream input( _T("my_file.txt") );
+			wxTextInputStream text(input, _T("\x09"), wxConvUTF8 );
+			wxString firstLine=text.ReadLine();
 			
-		if(firstLine.IsNull() || !firstLine.IsEmpty() || firstLine.Length()<2 ) 
-		*/
-		if( !file.Exists() )
-		{
-			file.Close();
-			//loginDialog->Show();//ShowModal
-			loginDialog->ShowModal();
+			if(firstLine.IsNull() || !firstLine.IsEmpty() || firstLine.Length()<2 ) 
+			*/
+			if( !file.Exists() )
+			{
+				file.Close();
+				//loginDialog->Show();//ShowModal
+				loginDialog->ShowModal();
+			}
 		}
+
 		isPlugInActive = true;
 		//::wxBeginBusyCursor();
 	}
@@ -502,8 +519,8 @@ void goodanchorage_pi::SendTimelineMessage(wxDateTime time)
    
 }
 
-void goodanchorage_pi::sendRequest(double lat,double lon){
-
+bool goodanchorage_pi::sendRequest(double lat,double lon){
+	bool isLoaded;
 	double m_minx = m_vp.lon_min;
     double m_maxx = m_vp.lon_max;
     double m_miny = m_vp.lat_min;
@@ -554,7 +571,7 @@ void goodanchorage_pi::sendRequest(double lat,double lon){
 				
 				wxMessageBox(_T("!root.IsArray() ") + res);
 				
-                return;
+                return false;
             }
 			
 			
@@ -563,7 +580,7 @@ void goodanchorage_pi::sendRequest(double lat,double lon){
 				 
 				if ( !lat_lon.IsArray() ) {
 					wxMessageBox(res);	
-					return ;
+					continue;
 				}
 
 				bool is_deep =  root[i][_T("is_deep")].AsBool();
@@ -595,17 +612,20 @@ void goodanchorage_pi::sendRequest(double lat,double lon){
 			
 			showMarkerList();
 			//wxMessageBox(_T("OK"));
-			
+			isLoaded = true;
 		
 		
 	}
 	else
 	{
 		wxMessageBox(wxString(_T("Unable to connect! Error code: ")) <<  get.GetError());
+		isLoaded = false;
 	}
 	 
 	wxDELETE(httpStream);
 	get.Close();
+
+	return isLoaded;
 }
 
 
@@ -659,9 +679,38 @@ void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 	return;
 }
 
+void goodanchorage_pi::_loadMarkersDb() {
+	// load them all -- don't worry about lat/lon for this version
+	char *sql = "SELECT id, lat, lon, is_deep, title FROM anchor_point;";
+	sqlite3_stmt *stmt;
+	int rc = sqlite3_prepare_v2(gaDb, sql, -1, &stmt, 0);
+	if( rc != SQLITE_OK ){
+      wxMessageBox(wxString::Format(wxT("Failed to fetch data: %s"), sqlite3_errmsg(gaDb)));
+      sqlite3_close(gaDb);
+	}
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+		MyMarkerType newMarker;
+		
+		newMarker.serverId = sqlite3_column_int(stmt, 0);
+		newMarker.serverLat = sqlite3_column_double(stmt, 1);
+		newMarker.serverLon = sqlite3_column_double(stmt, 2);
+		newMarker.serverDeep = sqlite3_column_int(stmt, 3);
+		newMarker.serverTitle = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
+		PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( newMarker.serverLat, 
+				newMarker.serverLon, _T("_img_ga_anchor_cyan_25"), _T(""), GetNewGUID()  );
+		newMarker.pluginWaitPoint = bufWayPoint;
+		markersList.push_back(newMarker);
+    }
+	sqlite3_finalize(stmt);
+	sqlite3_close(gaDb);
+
+	return;
+}
 
 
-void goodanchorage_pi::sendRequestPlus(int id){
+bool goodanchorage_pi::sendRequestPlus(int id){
+	bool isLoaded;
 	wxHTTP get;
 	get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 	get.SetTimeout(10); // 10 seconds of timeout instead of 10 minutes ...
@@ -699,7 +748,7 @@ void goodanchorage_pi::sendRequestPlus(int id){
 				
 				wxMessageBox(_T("!root.IsArray() ") + res);
 				
-                return;
+                return false;
             }
 			
 			if( root[_T("id")].IsValid() && !root[_T("id")].IsNull() )
@@ -725,7 +774,7 @@ void goodanchorage_pi::sendRequestPlus(int id){
 				if ( !lat_lon.IsArray() ) 
 				{					
 					wxMessageBox(_T("!lat_lon.IsArray()) ") + res);						
-					return ;
+					return false;
 				}
 
 				double lat_i = lat_lon[0].AsDouble();
@@ -744,7 +793,7 @@ void goodanchorage_pi::sendRequestPlus(int id){
 				if ( !wp_lat_lon.IsArray() ) 
 				{					
 					wxMessageBox(_T("!wp_lat_lon.IsArray()) ") + res);						
-					return ;
+					return false;
 				}
 				
 				forPrint += _T("Safe Waypoint(s): ") ;
@@ -919,6 +968,7 @@ void goodanchorage_pi::sendRequestPlus(int id){
 			
 			wxMessageBox(forPrint);
 			_storeMarkerJsonDb(id, res);
+			isLoaded = true;
 	}
 	else
 	{
@@ -932,10 +982,13 @@ void goodanchorage_pi::sendRequestPlus(int id){
 			wxString::Format(wxT("HTTP Code %d"),get.GetResponse())+
 			_T(": ")+
 			getErrorText(get.GetError(),get.GetResponse()) );
+		isLoaded = false;
 	}
 	 
 	wxDELETE(httpStream);
 	get.Close();
+
+	return isLoaded;
 }
 
 
