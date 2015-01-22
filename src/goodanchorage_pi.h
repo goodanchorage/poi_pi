@@ -33,7 +33,7 @@ public:
 	MyMarkerType(void);
     ~MyMarkerType(void);
 	
-	PlugIn_Waypoint *pluginWaitPoint;
+	PlugIn_Waypoint *pluginWaypoint;
 	
 	double serverLat;
 	double serverLon;
@@ -127,6 +127,7 @@ private:
 	void _storeMarkerDb(MyMarkerType);
 	void _storeMarkerJsonDb(int, wxString);
 	void _loadMarkersDb();
+	wxString _loadMarkerDetailsDb(int);
 };
 
 extern "C" DECL_EXP  wxString getErrorText(int errorID,int codeID);

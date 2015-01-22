@@ -237,9 +237,10 @@ int goodanchorage_pi::GetToolbarToolCount(void)
 
 bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 {
-   if(!isPlugInActive)
+	if(!isPlugInActive)
 		return false;
 
+	// load multiple markers -- coordinates only
 	if( event.LeftUp() && m_ActiveMarker == NULL )
 	{
 		double plat,plon;
@@ -248,40 +249,41 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
         GetCanvasLLPix( &m_vp, event.GetPosition(), &plat, &plon );
 		//wxMessageBox( wxString::Format(wxT("%f"),plat) + _T(" ") + wxString::Format(wxT("%f"),plon));
 		if (m_isOnline) {
-			if (!sendRequest(plat,plon)) m_isOnline = false;
-			wxMessageBox(_T("Switching to OFFLINE mode. Click on the map to load locally stored data."));
+			if (!sendRequest(plat,plon)) {
+				m_isOnline = false;
+				wxMessageBox(_T("Switching to OFFLINE mode.\nClick on the map to load locally stored data."));
+			}
 		} else {
 			_loadMarkersDb();
 			showMarkerList();
 		}
 		wxEndBusyCursor();
 		
-		return true;
+		return true;	// stop propagation of the event -- don't zoom/move the map.
 	}
-	else if( event.LeftUp() && m_ActiveMarker != NULL )
+	// load marker details before showing the dialog
+	else if ((event.LeftDClick() || event.RightDown()) && m_ActiveMarker != NULL )
 	{
-		
-		
-		//if( event.LeftDClick() )
-		//{
-		
-			//if(m_ActiveMyMarker !=  NULL) {
-				wxBeginBusyCursor();
-				sendRequestPlus(m_ActiveMyMarker->serverId);
-				wxEndBusyCursor();
-			//}
+		wxBeginBusyCursor();
+		if (m_isOnline) {
+			if (!sendRequestPlus(m_ActiveMyMarker->serverId)) {
+				m_isOnline = false;
+				wxMessageBox(_T("Switching to OFFLINE mode.\nClick on the marker to load locally stored data."));
+			}
+		} else {
+			// TODO: instead of JSON return a marker text ready for display
+			// Refactor sendRequestPlus to do the same
+			// Add a new method to show marker details from either of the two calls
+			wxString details = _loadMarkerDetailsDb(m_ActiveMyMarker->serverId);
+			if (!details.IsNull()) {
+				details = _T("No locally stored data available for this anchorage.");
+			}
+			m_ActiveMyMarker->pluginWaypoint->m_MarkDescription = details;
+			UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
+		}
+		wxEndBusyCursor();
 			
-			return true;
-		//}
-		 
-		//if( event.RightDown() ) 
-		//	return true;
-			
-		//if( event.LeftDown() )
-		//	return true;
-		
-		
-		//return false;
+		return false;	// allow event propagation -- we want to see marker dialog
 	}
 	else
 		return false;
@@ -409,7 +411,7 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 	{
 		
 		//PlugIn_Waypoint *marker = it->second;
-		PlugIn_Waypoint *marker = it->pluginWaitPoint;
+		PlugIn_Waypoint *marker = it->pluginWaypoint;
 		
 		 if(  PointInLLBox( &m_vp,  marker->m_lon, marker->m_lat ) ) // !!!!!!!!!!!!!!! x == lon  and y = lat !!!!!!!!
 		 {
@@ -422,16 +424,16 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 			
 				if(m_ActiveMyMarker != NULL)
 				{
-					m_ActiveMyMarker->pluginWaitPoint->m_MarkName = _T("");
-					UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaitPoint);
+					m_ActiveMyMarker->pluginWaypoint->m_MarkName = _T("");
+					UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
 				}
 				
                 m_ActiveMarker = marker;
 				m_ActiveMyMarker = &(*it);
                 changeMarkerFlag = true;
 				
-				m_ActiveMyMarker->pluginWaitPoint->m_MarkName = m_ActiveMyMarker->getMarkerTitle();
-				UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaitPoint);
+				m_ActiveMyMarker->pluginWaypoint->m_MarkName = m_ActiveMyMarker->getMarkerTitle();
+				UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
 				
                 break;
             }
@@ -442,8 +444,8 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 	{
 		if(m_ActiveMyMarker != NULL)
 		{
-			m_ActiveMyMarker->pluginWaitPoint->m_MarkName = _T("");
-			UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaitPoint);
+			m_ActiveMyMarker->pluginWaypoint->m_MarkName = _T("");
+			UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
 		}
 	
 		m_ActiveMarker = NULL;
@@ -603,7 +605,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
                     _T("_img_ga_anchor_cyan_25"), _T("") ,
                       GetNewGUID()  );
 					 
-				newMarker.pluginWaitPoint = bufWayPoint;
+				newMarker.pluginWaypoint = bufWayPoint;
 				
 				markersList.push_back(newMarker);
 				_storeMarkerDb(newMarker);
@@ -639,43 +641,52 @@ void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 	sqlite3_stmt *stmt;
 	if ( sqlite3_prepare(gaDb, sql, -1, &stmt, 0) != SQLITE_OK) {
 		wxMessageBox(_T("Failed prepare to store Anchorage in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 
 	if (sqlite3_bind_int(stmt, 1, marker.serverId) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind ID in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_double(stmt, 2, marker.serverLat) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind Latitude in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_double(stmt, 3, marker.serverLon) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind Longitude in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 4, marker.serverDeep) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind IsDeep in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_text(stmt, 5, marker.serverTitle.utf8_str(), marker.serverTitle.length(), 
 			SQLITE_STATIC) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind Title in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 6, marker.serverId) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind ID in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 7, marker.serverId) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind ID in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
 		wxMessageBox(_T("Failed to save Anchorage in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
-
+	sqlite3_finalize(stmt);
 	return;
 }
 
@@ -686,7 +697,6 @@ void goodanchorage_pi::_loadMarkersDb() {
 	int rc = sqlite3_prepare_v2(gaDb, sql, -1, &stmt, 0);
 	if( rc != SQLITE_OK ){
       wxMessageBox(wxString::Format(wxT("Failed to fetch data: %s"), sqlite3_errmsg(gaDb)));
-      sqlite3_close(gaDb);
 	}
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -695,18 +705,18 @@ void goodanchorage_pi::_loadMarkersDb() {
 		newMarker.serverId = sqlite3_column_int(stmt, 0);
 		newMarker.serverLat = sqlite3_column_double(stmt, 1);
 		newMarker.serverLon = sqlite3_column_double(stmt, 2);
-		newMarker.serverDeep = sqlite3_column_int(stmt, 3);
+		newMarker.serverDeep = sqlite3_column_int(stmt, 3) != 0;
 		newMarker.serverTitle = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
 		PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( newMarker.serverLat, 
 				newMarker.serverLon, _T("_img_ga_anchor_cyan_25"), _T(""), GetNewGUID()  );
-		newMarker.pluginWaitPoint = bufWayPoint;
+		newMarker.pluginWaypoint = bufWayPoint;
 		markersList.push_back(newMarker);
     }
 	sqlite3_finalize(stmt);
-	sqlite3_close(gaDb);
 
 	return;
 }
+
 
 
 bool goodanchorage_pi::sendRequestPlus(int id){
@@ -978,7 +988,7 @@ bool goodanchorage_pi::sendRequestPlus(int id){
 		httpStream->Read(out_stream);
 		*/
 		wxMessageBox( _T("Unable to connect. ")+ 
-			wxString::Format(wxT("Error %d,"),get.GetError())+
+			wxString::Format(wxT("Error %d\n"),get.GetError())+
 			wxString::Format(wxT("HTTP Code %d"),get.GetResponse())+
 			_T(": ")+
 			getErrorText(get.GetError(),get.GetResponse()) );
@@ -1126,28 +1136,62 @@ void goodanchorage_pi::_storeMarkerJsonDb(int id, wxString json) {
 	sqlite3_stmt *stmt;
 	if ( sqlite3_prepare(gaDb, sql, -1, &stmt, 0) != SQLITE_OK) {
 		wxMessageBox(_T("Failed prepare to update Anchorage in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 
 	if (sqlite3_bind_text(stmt, 1, json.utf8_str(), json.length(), SQLITE_STATIC) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind JSON in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 2, wxGetUTCTime()) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind Updated in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 3, id) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind ID in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 	
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
 		wxMessageBox(_T("Failed to update Anchorage in local storage"));
+		sqlite3_finalize(stmt);
 		return;
 	}
 
+	sqlite3_finalize(stmt);
 	return;
+}
+
+
+wxString goodanchorage_pi::_loadMarkerDetailsDb(int id) {
+	wxString json;
+	int updated;	// TODO: convert to UTC date and add to the extracted marker data
+	char *sql = "SELECT json, updated FROM anchor_point WHERE id = ?;";
+	sqlite3_stmt *stmt;
+	int rc = sqlite3_prepare_v2(gaDb, sql, -1, &stmt, 0);
+	if( rc != SQLITE_OK ){
+      wxMessageBox(wxString::Format(wxT("Failed to fetch Anchorage details: %s"), sqlite3_errmsg(gaDb)));
+	  sqlite3_finalize(stmt);
+	  return json;
+	}
+
+	if (sqlite3_bind_int(stmt, 1, id) != SQLITE_OK) {
+		wxMessageBox(_T("Failed to bind ID while loading locally stored anchorage"));
+		sqlite3_finalize(stmt);
+		return json;
+	}
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+		json = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+		updated = sqlite3_column_int(stmt, 0);
+    }
+	sqlite3_finalize(stmt);
+
+	return json;
 }
 
 
@@ -1158,7 +1202,7 @@ void goodanchorage_pi::cleanMarkerList(void)
 
 	for(unsigned int i = 0; i < markersList.size(); i++)
 	{
-		DeleteSingleWaypoint(  markersList[i].pluginWaitPoint->m_GUID );
+		DeleteSingleWaypoint(  markersList[i].pluginWaypoint->m_GUID );
 	}
 	
 	markersList.clear();
@@ -1169,7 +1213,7 @@ void goodanchorage_pi::showMarkerList(void)
 
 	for(unsigned int i = 0; i < markersList.size(); i++)
 	{
-		AddSingleWaypoint(  markersList[i].pluginWaitPoint,  true);
+		AddSingleWaypoint(  markersList[i].pluginWaypoint,  true);
 	}
 }
 	
