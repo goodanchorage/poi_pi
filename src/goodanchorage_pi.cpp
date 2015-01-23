@@ -325,8 +325,8 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		}
 		// TODO: Crashes somewhere here. Null pointer?
 		// Looks like either m_ActiveMyMarker is not found fast enough or 
-		// network request takes to long to load between the clicks.
-		// Works a bit better with right-click than double-clik.
+		// network request takes too long to load between the clicks.
+		// Works much better with right-click than double-clik.
 		if (m_ActiveMyMarker) {
 			m_ActiveMyMarker->pluginWaypoint->m_MarkDescription = details;
 			UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
@@ -353,14 +353,6 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 	wxBitmap *toolbar_icon = m_isIconPressed ?  _img_ga_toolbar_on : _img_ga_toolbar;
 	SetToolbarToolBitmaps(m_leftclick_tool_id, toolbar_icon, toolbar_icon);
 
-	//wxSetCursor(*wxCROSS_CURSOR);
-	//m_parent_window->SetCursor(wxCursor(wxCURSOR_CROSS));
-	//m_parent_window->SetCursor(wxCURSOR_DEFAULT);
-	//m_parent_window->SetCursor( wxCURSOR_WAIT );
-	//m_parent_window->Refresh( true );
-	//wxWindow::SetCursor(wxCURSOR_ARROW);
-	//wxCursor *pCursorPencil = new wxCursor ( wxCURSOR_ARROW );
-	//m_parent_window->SetCursor(*pCursorPencil);
 	if(isPlugInActive)
 	{
 		cleanMarkerList();
@@ -390,11 +382,9 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 		}
 
 		isPlugInActive = true;
-		//::wxBeginBusyCursor();
 	}
 	
     RequestRefresh(m_parent_window); // refresh main window
-	//m_parent_window->SetCursor(wxCURSOR_CROSS);
 }
 
 
