@@ -261,7 +261,11 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		return true;	// stop propagation of the event -- don't zoom/move the map.
 	}
 	// load marker details before showing the dialog
-	else if ((event.LeftDClick() || event.RightDown()) && m_ActiveMarker != NULL )
+	else if (event.LeftDClick() && m_ActiveMarker != NULL ) 
+	{ 
+		return true;	// prevent marker selection
+	}
+	else if (event.RightDown () && m_ActiveMarker != NULL )
 	{
 		//TODO: change request from LeftDClick to MouseOver or alter waypoint dialog to load inside
 		wxBeginBusyCursor();
@@ -616,6 +620,9 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
                     _T("_img_ga_anchor"), _T("") ,
                       GetNewGUID()  );
 				//bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
+				bufWayPoint->m_MarkDescription = 
+								wxT("Right click on the marker to load details.\n")
+								wxT("Slow network delays data loading.");
 				newMarker.pluginWaypoint = bufWayPoint;
 				
 				markersList.push_back(newMarker);
