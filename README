@@ -1,9 +1,12 @@
 GoodAnchorage.com plug-in for OpenCPN
 
-Installer files: 
-https://github.com/goodanchorage/goodanchorage_pi/tree/master/install
+Installation
 
-Development:
+Windows: http://goodanchorage.com/download/goodanchorage_pi-0.2-win32.exe
+
+
+Development
+
 git clone git@github.com:goodanchorage/goodanchorage_pi.git
 
 Windows:
