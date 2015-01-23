@@ -32,10 +32,10 @@
 
 #include "icons.h"
 
-//std::map<std::string,PlugIn_Waypoint*> myMap;
 std::vector<MyMarkerType> markersList;
 sqlite3 *gaDb;
-bool m_iconpressed;
+wxTextFile *gaAuthFile;
+
 
 //---------------------------------------------------------------------------------------------------------
 //
@@ -59,7 +59,6 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) {
 wxWindow        *m_parent_window;
 
 
-
 //---------------------------------------------------------------------------------------------------------
 //
 //          PlugIn initialization and de-init
@@ -74,6 +73,7 @@ goodanchorage_pi::goodanchorage_pi(void *ppimgr)
 	  isPlugInActive = false;
 }
 
+
 goodanchorage_pi::~goodanchorage_pi(void)
 {
 	  delete _img_ga_anchor;
@@ -81,9 +81,11 @@ goodanchorage_pi::~goodanchorage_pi(void)
 	  delete _img_ga_toolbar_on;
 }
 
+
 int goodanchorage_pi::Init(void)
 {
 	isPlugInActive = false;
+	m_isIconPressed = false;
 	m_ActiveMarker = NULL;
 	m_ActiveMyMarker = NULL;
 	// Get a pointer to the opencpn display canvas
@@ -104,9 +106,14 @@ int goodanchorage_pi::Init(void)
       //    This PlugIn needs a toolbar icon, so request its insertion if enabled locally
       m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_toolbar, _img_ga_toolbar, wxITEM_CHECK,
                             _("GoodAnchorage"), _T(""), NULL, GOODANCHORAGE_TOOL_POSITION, 0, this);
-
-      if (!_initDb()) {
+	  if (!_initPluginDir()) {
+		  wxMessageBox(_T("Error locating plugin data directory.\nGoodAnchorage plugin will not run properly."),
+						_T("GoodAnchorage Plugin"), wxICON_ERROR);
+	  } else if (!_initDb()) {
 		  wxMessageBox(_T("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
+						_T("GoodAnchorage Plugin"), wxICON_ERROR);
+	  } else if (!_initAuthFile()) {
+		  wxMessageBox(_T("Error creating authentication file.\nGoodAnchorage plugin will not run properly."),
 						_T("GoodAnchorage Plugin"), wxICON_ERROR);
 	  }
 
@@ -123,13 +130,22 @@ int goodanchorage_pi::Init(void)
 }
 
 
-bool goodanchorage_pi::_initDb(void) {
+bool goodanchorage_pi::_initPluginDir(void) {
 	wxString ga_dir = *GetpPrivateApplicationDataLocation();
 	ga_dir.Append(_T("plugins"));
 	ga_dir.Append(wxFileName::GetPathSeparator());
 	ga_dir.Append(_T("goodanchorage"));
 	if (!wxDir::Exists(ga_dir)) { wxFileName::Mkdir(ga_dir); }
-	wxString db_file = ga_dir + wxFileName::GetPathSeparator() + _T("ga_data.db");
+
+	m_PluginDir = ga_dir;
+	return true;
+}
+
+
+bool goodanchorage_pi::_initDb(void) {
+	if (m_PluginDir.IsNull()) return false;
+
+	wxString db_file = m_PluginDir + wxFileName::GetPathSeparator() + _T("ga_data.db");
 	wxLogMessage(db_file);
 
 	int rc = sqlite3_open_v2(db_file.utf8_str(), &gaDb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
@@ -172,10 +188,25 @@ bool goodanchorage_pi::_initDb(void) {
 }
 
 
+
+bool goodanchorage_pi::_initAuthFile(void) {
+	if (m_PluginDir.IsNull()) { return false; }
+	wxString fname = m_PluginDir + wxFileName::GetPathSeparator() + _T("ga_auth.txt");
+
+	gaAuthFile = new wxTextFile( fname );
+	if( ! gaAuthFile->Exists() ) {
+		if (!gaAuthFile->Create()) return false;
+	}
+
+	return true;
+}
+
+
 bool goodanchorage_pi::DeInit(void)
 {
     cleanMarkerList();
 	sqlite3_close(gaDb);
+	gaAuthFile->Close();
 	RemovePlugInTool(m_leftclick_tool_id);
     return true;
 }
@@ -309,8 +340,8 @@ void goodanchorage_pi::ShowPreferencesDialog( wxWindow* parent )
 void goodanchorage_pi::OnToolbarToolCallback(int id)
 {
 	// a hack to overcome unappealing icon shifting done by OCPN by default
-	m_iconpressed = !m_iconpressed;
-	wxBitmap *toolbar_icon = m_iconpressed ?  _img_ga_toolbar_on : _img_ga_toolbar;
+	m_isIconPressed = !m_isIconPressed;
+	wxBitmap *toolbar_icon = m_isIconPressed ?  _img_ga_toolbar_on : _img_ga_toolbar;
 	SetToolbarToolBitmaps(m_leftclick_tool_id, toolbar_icon, toolbar_icon);
 
 	//wxSetCursor(*wxCROSS_CURSOR);
@@ -340,20 +371,11 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 		get.Close();
 
 		if (m_isOnline) {
-			//TODO: move file to local storage
-			// handle a case when the file is empty yet no login dialog comes up
-			wxTextFile file(  _T("my_file.txt")  );
-			/*
-			wxFileInputStream input( _T("my_file.txt") );
-			wxTextInputStream text(input, _T("\x09"), wxConvUTF8 );
-			wxString firstLine=text.ReadLine();
-			
-			if(firstLine.IsNull() || !firstLine.IsEmpty() || firstLine.Length()<2 ) 
-			*/
-			if( !file.Exists() )
-			{
-				file.Close();
-				//loginDialog->Show();//ShowModal
+			// login box if no auth info in the auth file
+			gaAuthFile->Open();
+			if( gaAuthFile->Eof() )
+			{	
+				gaAuthFile->Close();
 				loginDialog->ShowModal();
 			}
 		}
@@ -631,14 +653,18 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 			
 			
 			showMarkerList();
-			//wxMessageBox(_T("OK"));
 			isLoaded = true;
 		
 		
 	}
 	else
 	{
-		wxMessageBox(wxString(_T("Unable to connect! Error code: ")) <<  get.GetError());
+		wxMessageBox( _T("Unable to connect: ") +
+			getErrorText(get.GetError(),get.GetResponse()) +
+			_T("\n") +
+			wxString::Format(wxT("(Error %d, "),get.GetError())+
+			wxString::Format(wxT("HTTP %d)"),get.GetResponse()));
+
 		isLoaded = false;
 	}
 	 
@@ -1022,11 +1048,11 @@ wxString goodanchorage_pi::sendRequestPlus(int id){
 		wxStringOutputStream out_stream(&res);
 		httpStream->Read(out_stream);
 		*/
-		wxMessageBox( _T("Unable to connect. ")+ 
-			wxString::Format(wxT("Error %d\n"),get.GetError())+
-			wxString::Format(wxT("HTTP Code %d"),get.GetResponse())+
-			_T(": ")+
-			getErrorText(get.GetError(),get.GetResponse()) );
+		wxMessageBox( _T("Unable to connect: ") +
+			getErrorText(get.GetError(),get.GetResponse()) +
+			_T("\n") +
+			wxString::Format(wxT("(Error %d, "),get.GetError())+
+			wxString::Format(wxT("HTTP %d)"),get.GetResponse()));
 	}
 	 
 	wxDELETE(httpStream);
@@ -1038,46 +1064,30 @@ wxString goodanchorage_pi::sendRequestPlus(int id){
 
 void goodanchorage_pi::setServerAuthHeaders(wxHTTP &httpObj)
 {
+	if( !gaAuthFile->Exists() || !gaAuthFile->Open()) return;
 
-	wxTextFile file(  _T("my_file.txt")  );
-	if( !file.Exists() )
-	{
-		
-		return;
-	}
-	else
-		file.Close();
-	
 	httpObj.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
-	
 
-	wxFileInputStream input( _T("my_file.txt") );
-	wxTextInputStream text(input, _T("\x09"), wxConvUTF8 );
-	
-	
+	wxString sessid = gaAuthFile->GetFirstLine();
+	wxString session_name = gaAuthFile->GetNextLine();
+	wxString token = gaAuthFile->GetNextLine();
 		
-		wxString sessid=text.ReadLine();
-		wxString session_name=text.ReadLine();
-		wxString token=text.ReadLine();
-		
-		
-		httpObj.SetHeader(_T("Cookie"),  session_name + _T("=") + sessid );
-		httpObj.SetHeader(_T("X-CSRF-Token"),  token );
+	httpObj.SetHeader(_T("Cookie"),  session_name + _T("=") + sessid );
+	httpObj.SetHeader(_T("X-CSRF-Token"),  token );
 }
 
 
 void CustomDialog::sendRequestAuth(wxString login, wxString password)
 {
-	 wxHTTP http;
+	if( !gaAuthFile->Exists() || !gaAuthFile->Open()) return;
+
+	wxHTTP http;
     http.SetHeader(_T("Content-type"), _T("application/json")); 
     http.SetPostBuffer(_T("{ \"username\":\"") + login + _T("\",\"password\":\"")+ password +_T("\" }")); 
     http.Connect(_T("dev.goodanchorage.com"));
     wxInputStream *httpStream = http.GetInputStream(_T("/api/v1/user/login.json"));
 	
-	
-	wxTextFile file( _T("my_file.txt") );
-	file.Open();
-	file.Clear();
+	gaAuthFile->Clear();
 	
     if (http.GetError() == wxPROTO_NOERR)
     {
@@ -1108,21 +1118,21 @@ void CustomDialog::sendRequestAuth(wxString login, wxString password)
 			{
 				wxString sessid = root[_T("sessid")].AsString();	
 
-				file.AddLine( sessid );
+				gaAuthFile->AddLine( sessid );
 			}
 				
 			if( root[_T("session_name")].IsValid() && !root[_T("session_name")].IsNull() )
 			{
 				wxString session_name = root[_T("session_name")].AsString();
 
-				file.AddLine( session_name );				
+				gaAuthFile->AddLine( session_name );				
 			}
 				
 			if( root[_T("token")].IsValid() && !root[_T("token")].IsNull() )
 			{
 				wxString token = root[_T("token")].AsString();	
 
-				file.AddLine( token );
+				gaAuthFile->AddLine( token );
 			}
 			
 			
@@ -1131,16 +1141,15 @@ void CustomDialog::sendRequestAuth(wxString login, wxString password)
     }
     else
     {
-		wxMessageBox( _T("Unable to connect. ")+ 
-			wxString::Format(wxT("Error %d\n"),http.GetError())+
-			wxString::Format(wxT("HTTP %d"),http.GetResponse())+
-			_T(": ")+
-			getErrorText(http.GetError(),http.GetResponse()) );
+		wxMessageBox( _T("Unable to connect: ") +
+			getErrorText(http.GetError(),http.GetResponse()) +
+			_T("\n") +
+			wxString::Format(wxT("(Error %d, "),http.GetError())+
+			wxString::Format(wxT("HTTP %d)"),http.GetResponse()));
     }
 
-	file.Write();
-	file.Close();
-
+	gaAuthFile->Write();
+	gaAuthFile->Close();
 
     wxDELETE(httpStream);
     http.Close();
@@ -1151,19 +1160,24 @@ wxString getErrorText(int errorID,int codeID)
 {
 	if(errorID == 3 && codeID == 0)
 	{	
-		//TODO: translate errors
-		return _T("Проблемы с интерентом");
+		return _T("Connection to server failed.");
+	}
+	else
+	if(errorID == 6 && codeID == 401 )
+	{	
+		return _T("Unrecognized username or password.");
 	}
 	else
 	if(errorID == 6 && codeID == 403 )
 	{	
-		return _T("Forbidden");
+		return _T("Access to data is forbidden.");
 	}
 	else
 	{
-		return _T("Неизвестная ошибка");
+		return _T("Unknown error.");
 	}	
 }
+
 
 void goodanchorage_pi::_storeMarkerJsonDb(int id, wxString json) {
 	// insert or update while keeping existing values: json and updated
@@ -1343,7 +1357,9 @@ void CustomDialog::onLogin(wxCommandEvent & WXUNUSED(event))
 	//SetToolbarItemState( m_leftclick_tool_id, true );
 	wxString login = loginTextCtrl->GetValue();
 	wxString password = passwordTextCtrl->GetValue();
+	wxBeginBusyCursor();
 	sendRequestAuth(login,password);
+	wxEndBusyCursor();
     Close(true);
 }
 

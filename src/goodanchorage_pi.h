@@ -123,8 +123,12 @@ public:
 	CustomDialog *loginDialog;
 private:
 	bool m_isOnline;
+	bool m_isIconPressed;
+	wxString m_PluginDir;
 
+	bool _initPluginDir(void);
 	bool _initDb(void);
+	bool _initAuthFile(void);
 	void _storeMarkerDb(MyMarkerType);
 	void _storeMarkerJsonDb(int, wxString);
 	void _loadMarkersDb();
