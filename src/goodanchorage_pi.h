@@ -62,7 +62,7 @@ public:
 	void onLogin(wxCommandEvent & event);
 	
 	void setM_leftclick_tool_id(int m_leftclick_tool_id);
-	void sendRequestAuth(wxString login, wxString password);
+	bool sendRequestAuth(wxString login, wxString password);
 };
 
 class goodanchorage_pi : public opencpn_plugin_112
@@ -122,7 +122,6 @@ public:
 
 	CustomDialog *loginDialog;
 private:
-	bool m_isOnline;
 	bool m_isIconPressed;
 	wxString m_PluginDir;
 

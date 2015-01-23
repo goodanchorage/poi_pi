@@ -35,7 +35,7 @@
 std::vector<MyMarkerType> markersList;
 sqlite3 *gaDb;
 wxTextFile *gaAuthFile;
-
+bool isOnline;
 
 //---------------------------------------------------------------------------------------------------------
 //
@@ -292,9 +292,9 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		wxBeginBusyCursor();
         GetCanvasLLPix( &m_vp, event.GetPosition(), &plat, &plon );
 		//wxMessageBox( wxString::Format(wxT("%f"),plat) + _T(" ") + wxString::Format(wxT("%f"),plon));
-		if (m_isOnline) {
+		if (isOnline) {
 			if (!sendRequest(plat,plon)) {
-				m_isOnline = false;
+				isOnline = false;
 				wxMessageBox(_T("Switching to OFFLINE mode.\nClick on the map to load locally stored data."));
 			}
 		} else {
@@ -310,11 +310,11 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 	{
 		wxBeginBusyCursor();
 		wxString details;
-		if (m_isOnline) {
+		if (isOnline) {
 			details = sendRequestPlus(m_ActiveMyMarker->serverId);
 			if (details.IsNull()) {
 				details = wxEmptyString;
-				m_isOnline = false;
+				isOnline = false;
 				wxMessageBox(_T("Switching to OFFLINE mode."));
 			}
 		} else {
@@ -368,10 +368,10 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 		while (!get.Connect(_T("dev.goodanchorage.com")))
 			wxSleep(5);
 	 
-		m_isOnline = wxApp::IsMainLoopRunning(); // should return true
+		isOnline = wxApp::IsMainLoopRunning(); // should return true
 		get.Close();
 
-		if (m_isOnline) {
+		if (isOnline) {
 			// login box if no auth info in the auth file
 			gaAuthFile->Open();
 			if( gaAuthFile->Eof() )
@@ -622,6 +622,8 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 			wxString::Format(wxT("(Error %d, "),get.GetError())+
 			wxString::Format(wxT("HTTP %d)"),get.GetResponse()));
 
+		// TODO: catch 401/403, clear auth data nad prompt to login
+		// otherwise, stale auth data sits in the file and prevents access
 		isLoaded = false;
 	}
 	 
@@ -1009,7 +1011,7 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 
 void goodanchorage_pi::setServerAuthHeaders(wxHTTP &httpObj)
 {
-	if( !gaAuthFile->Exists() || !gaAuthFile->Open()) return;
+	if( !gaAuthFile->Exists() || !gaAuthFile->Open() || gaAuthFile->GetLineCount() < 3 ) return;
 
 	httpObj.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 
@@ -1022,9 +1024,9 @@ void goodanchorage_pi::setServerAuthHeaders(wxHTTP &httpObj)
 }
 
 
-void CustomDialog::sendRequestAuth(wxString login, wxString password)
+bool CustomDialog::sendRequestAuth(wxString login, wxString password)
 {
-	if( !gaAuthFile->Exists() || !gaAuthFile->Open()) return;
+	if( !gaAuthFile->Exists() || !gaAuthFile->Open()) return false;
 
 	wxHTTP http;
     http.SetHeader(_T("Content-type"), _T("application/json")); 
@@ -1049,7 +1051,7 @@ void CustomDialog::sendRequestAuth(wxString login, wxString password)
 		int numErrors = reader.Parse( res, &root );
 		if ( numErrors > 0  )  {
 			wxMessageBox(_T("reader  ERR0R:") + res);
-			return;
+			return false;
 		}
 		
 		if( root[_T("sessid")].IsValid() && !root[_T("sessid")].IsNull() )
@@ -1080,6 +1082,7 @@ void CustomDialog::sendRequestAuth(wxString login, wxString password)
 			_T("\n") +
 			wxString::Format(wxT("(Error %d, "),http.GetError())+
 			wxString::Format(wxT("HTTP %d)"),http.GetResponse()));
+		isOnline = false;
     }
 
 	gaAuthFile->Write();
@@ -1087,6 +1090,8 @@ void CustomDialog::sendRequestAuth(wxString login, wxString password)
 
     wxDELETE(httpStream);
     http.Close();
+
+	return true;
 }
 
 
@@ -1246,7 +1251,7 @@ CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
 	wxStaticText *passwordTitle = new wxStaticText(this, -1, wxT("Password:"));
   
 	loginTextCtrl = new wxTextCtrl(this, -1);
-	passwordTextCtrl = new wxTextCtrl(this, -1);
+	passwordTextCtrl = new wxTextCtrl(this, -1, _T(""), wxDefaultPosition, wxDefaultSize, wxTE_PASSWORD);
   
 	loginHorithontalBox->Add(loginTitle,1);
 	loginHorithontalBox->Add(loginTextCtrl,1, wxLEFT, 5);
@@ -1290,7 +1295,10 @@ void CustomDialog::onLogin(wxCommandEvent & WXUNUSED(event))
 	wxString login = loginTextCtrl->GetValue();
 	wxString password = passwordTextCtrl->GetValue();
 	wxBeginBusyCursor();
-	sendRequestAuth(login,password);
+	if (!sendRequestAuth(login,password)) {
+		// TODO: show login box again
+		// If canceled -- switch to offline
+	}
 	wxEndBusyCursor();
     Close(true);
 }
