@@ -365,7 +365,7 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 		wxHTTP get;
 		get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 		get.SetTimeout(10);
-		while (!get.Connect(_T("dev.goodanchorage.com")))
+		while (!get.Connect(_T("goodanchorage.com")))
 			wxSleep(5);
 	 
 		isOnline = wxApp::IsMainLoopRunning(); // should return true
@@ -547,7 +547,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 	setServerAuthHeaders(get);
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
-	while (!get.Connect(_T("dev.goodanchorage.com")))  // only the server, no pages here yet ...
+	while (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
 		wxSleep(5);
 	 
 	wxApp::IsMainLoopRunning(); // should return true
@@ -743,7 +743,7 @@ wxString goodanchorage_pi::sendRequestPlus(int id){
 	setServerAuthHeaders(get);
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
-	while (!get.Connect(_T("dev.goodanchorage.com")))  // only the server, no pages here yet ...
+	while (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
 		wxSleep(5);
 	 
 	wxApp::IsMainLoopRunning(); // should return true
@@ -1031,7 +1031,7 @@ bool CustomDialog::sendRequestAuth(wxString login, wxString password)
 	wxHTTP http;
     http.SetHeader(_T("Content-type"), _T("application/json")); 
     http.SetPostBuffer(_T("{ \"username\":\"") + login + _T("\",\"password\":\"")+ password +_T("\" }")); 
-    http.Connect(_T("dev.goodanchorage.com"));
+    http.Connect(_T("goodanchorage.com"));
     wxInputStream *httpStream = http.GetInputStream(_T("/api/v1/user/login.json"));
 	
 	gaAuthFile->Clear();
@@ -1234,7 +1234,7 @@ wxString MyMarkerType::getMarkerTitle(void)
 void goodanchorage_pi::initLoginDialog(wxWindow* parent)
 {
 
-	loginDialog = new CustomDialog(wxT("CustomDialog"),parent);	
+	loginDialog = new CustomDialog(wxT("GoodAnchorage.com Account"),parent);	
 }
 
 
