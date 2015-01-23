@@ -252,11 +252,17 @@ wxString goodanchorage_pi::GetShortDescription()
       return _("GoodAnchorage PlugIn for OpenCPN");
 }
 
-
 wxString goodanchorage_pi::GetLongDescription()
 {
-      return _("GoodAnchorage Plugin for OpenCPN\n\
-Provides access to GoodAnchorage.com data." );
+      return _("GoodAnchorage PlugIn for OpenCPN\n\n\
+Provides access to crowdsourced anchorages around the world.\n\n\
+- Initial data download requires a working network connection and\n\
+  a free GoodAnchorage.com account.\n\
+- Afterwards, locally stored data can be used whenever offline.\n\
+- To view a list of anchorages for an area activate toolbar icon\n\
+  and DOUBLE-CLICK on the map.\n\
+- To view anchorage details RIGHT-CLICK on a marker and select Properties.\n\n\
+Your feedback is welcome! http://GoodAnchorage.com/contact");
 }
 
 
@@ -277,7 +283,9 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		return false;
 
 	// load multiple markers -- coordinates only
-	if( event.LeftUp() && m_ActiveMarker == NULL )
+	// TODO: detect map shifts to prevent sending useless requests?
+	//if( event.LeftIsDown() && !event.Dragging() && m_ActiveMarker == NULL )
+	if( event.LeftDClick() && m_ActiveMarker == NULL )
 	{
 		double plat,plon;
 
@@ -298,13 +306,8 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		return true;	// stop propagation of the event -- don't zoom/move the map.
 	}
 	// load marker details before showing the dialog
-	else if (event.LeftDClick() && m_ActiveMarker != NULL ) 
-	{ 
-		return true;	// prevent marker selection
-	}
 	else if (event.RightDown () && m_ActiveMarker != NULL )
 	{
-		//TODO: change request from LeftDClick to MouseOver or alter waypoint dialog to load inside
 		wxBeginBusyCursor();
 		wxString details;
 		if (m_isOnline) {
@@ -1202,7 +1205,8 @@ void goodanchorage_pi::cleanMarkerList(void)
 
 void goodanchorage_pi::showMarkerList(void)
 {
-
+	// TODO: when charts are present markers are hidden unless there is a zoom in/out
+	// Need to add a layer?
 	for(unsigned int i = 0; i < markersList.size(); i++)
 	{
 		AddSingleWaypoint(  markersList[i].pluginWaypoint,  true);
