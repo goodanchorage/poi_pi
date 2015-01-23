@@ -800,254 +800,16 @@ wxString goodanchorage_pi::sendRequestPlus(int id){
 	 
 	if (get.GetError() == wxPROTO_NOERR)
 	{
-		wxString forPrint;
-		wxString res;
-		wxStringOutputStream out_stream(&res);
+		wxString json;
+		wxStringOutputStream out_stream(&json);
 		httpStream->Read(out_stream);
-	 
-	 
-		// construct the JSON root object
-            wxJSONValue  root;
-        // construct a JSON parser
-            wxJSONReader reader;
-			int id;
 
-        // now read the JSON text and store it in the 'root' structure
-        // check for errors before retreiving values...
-            int numErrors = reader.Parse( res, &root );
-            if ( numErrors > 0  )  {
-				
-				wxMessageBox(_T("!root.IsArray() ") + res);
-				
-                return details;
-            }
-			
-			if( root[_T("id")].IsValid() && !root[_T("id")].IsNull() )
-				id = root[_T("id")].AsInt();
-				
-			if( root[_T("title")].IsValid() && !root[_T("title")].IsNull() )
-			{
-				wxString title = root[_T("title")].AsString(); //Anchorage Name
-				forPrint += _T("Anchorage Name: ") + title + _T("\n");
-			}
-
-			if( root[_T("title_alt")].IsValid() && !root[_T("title_alt")].IsNull() )
-			{
-				wxString title_alt = root[_T("title_alt")].AsString() ; //Alternative Name
-				forPrint += _T("Alternative Name: ") + title_alt + _T("\n");
-			}
-
-		 
-			if( root[_T("lat_lon")].IsValid() && !root[_T("lat_lon")].IsNull() )
-			{
-				wxJSONValue lat_lon = root[_T("lat_lon")];//Anchorage Position Single lat/lon pair
-					 
-				if ( !lat_lon.IsArray() ) 
-				{					
-					wxMessageBox(_T("!lat_lon.IsArray()) ") + res);						
-					return details;
-				}
-
-				double lat_i = lat_lon[0].AsDouble();
-				double lon_i = lat_lon[1].AsDouble();
-				
-				forPrint += _T("Anchorage Position: ") 
-					+ wxString::Format(wxT(" %.3f  "),lat_i)
-					+ wxString::Format(wxT(" %.3f"),lon_i)
-					+ _T("\n");
-			}
-			
-			if( root[_T("wp_lat_lon")].IsValid() && !root[_T("wp_lat_lon")].IsNull() )
-			{
-				wxJSONValue wp_lat_lon  = root[_T("wp_lat_lon")]; //Safe Waypoint(s) Multiple lat/lon pairs
-				
-				if ( !wp_lat_lon.IsArray() ) 
-				{					
-					wxMessageBox(_T("!wp_lat_lon.IsArray()) ") + res);						
-					return details;
-				}
-				
-				forPrint += _T("Safe Waypoint(s): ") ;
-				
-				for(int i=0; i < wp_lat_lon.Size();i++)
-				{
-					double lat_wp_i = wp_lat_lon[i][0].AsDouble();
-					double lon_wp_i = wp_lat_lon[i][0].AsDouble();
-					
-					
-					forPrint += wxString::Format(wxT(" %.3f"),lat_wp_i)
-						+ wxString::Format(wxT(" %.3f"),lon_wp_i)
-						+ _T(" ; ");
-				}
-				
-				forPrint += _T("\n"); 
-			}
-
-			if( root[_T("depth_m")].IsValid() && !root[_T("depth_m")].IsNull() )
-			{
-				wxJSONValue depth_m_val = root[_T("depth_m")];
-				double depth_m;
-				if (depth_m_val.IsDouble()) {
-					depth_m = depth_m_val.AsDouble(); //Depth (m)
-				} else {
-					depth_m = depth_m_val.AsInt();
-				}
-				
-
-				forPrint += _T("Depth (m): ") 
-					+ wxString::Format(wxT(" %.1f"),depth_m)
-					+ _T("\n");
-			}
-
-			if( root[_T("depth_ft")].IsValid() && !root[_T("depth_ft")].IsNull() )
-			{
-				wxJSONValue depth_ft_val = root[_T("depth_ft")];
-				double depth_ft;
-				if (depth_ft_val.IsDouble()) {
-					depth_ft = depth_ft_val.AsDouble(); //Depth (ft)
-				} else {
-					depth_ft = depth_ft_val.AsInt();
-				}
-				
-				forPrint += _T("Depth (ft): ") 
-					+ wxString::Format(wxT(" %.0f"),depth_ft)
-					+ _T("\n");
-			}
-
-				
-			if( root[_T("is_deep")].IsValid() && !root[_T("is_deep")].IsNull() )
-				bool is_deep = root[_T("is_deep")].AsBool() ; //Don't show
-
-			if( root[_T("bottom")].IsValid() && !root[_T("bottom")].IsNull() )
-			{			
-				wxJSONValue bottom  = root[_T("bottom")]; //Bottom Composition
-				
-				forPrint += _T("Bottom Composition: ") ;
-				for(int i=0; i < bottom.Size();i++)
-				{
-					forPrint += bottom[i].AsString() + _T(" ");
-				}
-				forPrint += _T("\n"); 
-			}
-			
-			if( root[_T("prot_wind")].IsValid() && !root[_T("prot_wind")].IsNull() )
-			{
-				wxJSONValue prot_wind  = root[_T("prot_wind")]; //Protection from Wind
-				
-				forPrint += _T("Protection from Wind: ") ;
-				for(int i=0; i < prot_wind.Size();i++)
-				{
-					forPrint += prot_wind[i].AsString() + _T(" ");
-				}
-				forPrint += _T("\n"); 
-			}
-
-			if( root[_T("prot_swell")].IsValid() && !root[_T("prot_swell")].IsNull() )
-			{
-				wxJSONValue prot_swell  = root[_T("prot_swell")]; //Protection from Swell
-				
-				forPrint += _T("Protection from Swell: ") ;
-				for(int i=0; i < prot_swell.Size();i++)
-				{
-					forPrint += prot_swell[i].AsString() + _T(" ");
-				}
-				forPrint += _T("\n"); 
-			}
-
-			if( root[_T("navigation")].IsValid() && !root[_T("navigation")].IsNull() )
-			{
-				wxJSONValue navigation  = root[_T("navigation")]; //Navigation Assets
-				
-				forPrint += _T("Navigation Assets: ") ;
-				for(int i=0; i < navigation.Size();i++)
-				{
-					forPrint += navigation[i].AsString() + _T(" ");
-				}
-				forPrint += _T("\n"); 
-			}
-
-			if( root[_T("shore_access")].IsValid() && !root[_T("shore_access")].IsNull() )
-			{
-				wxJSONValue shore_access  = root[_T("shore_access")]; //Shore Access
-				
-				forPrint += _T("Shore Access: ") ;
-				for(int i=0; i < shore_access.Size();i++)
-				{
-					forPrint += shore_access[i].AsString() + _T(" ");
-				}
-				forPrint += _T("\n"); 
-			}
-
-			if( root[_T("closeby")].IsValid() && !root[_T("closeby")].IsNull() )
-			{
-				wxString closeby  = root[_T("closeby")].AsString(); //Close-by
-				
-				forPrint += _T("Close-by: ") 
-					+ closeby
-					+ _T("\n");
-			}
-
-			if( root[_T("nearby_town")].IsValid() && !root[_T("nearby_town")].IsNull() )
-			{
-				wxString nearby_town = root[_T("nearby_town")].AsString(); // Nearest Town(s)
-				
-				forPrint += _T("Nearest Town(s): ") 
-					+ nearby_town
-					+ _T("\n");
-			}
-
-			if( root[_T("dangers")].IsValid() && !root[_T("dangers")].IsNull() )
-			{
-				wxJSONValue dangers  = root[_T("dangers")]; //Dangers
-				
-				forPrint += _T("Dangers: ") ;
-				for(int i=0; i < dangers.Size();i++)
-				{
-					forPrint += dangers[i].AsString() + _T(" ");
-				}
-				forPrint += _T("\n"); 
-			}
-
-			if( root[_T("country")].IsValid() && !root[_T("country")].IsNull() )
-			{
-				wxString country  = root[_T("country")].AsString(); //Country
-				
-				forPrint += _T("Country: ") 
-					+ country
-					+ _T("\n");
-			}
-
-			if( root[_T("date_anchored")].IsValid() && !root[_T("date_anchored")].IsNull() )
-			{
-				wxString date_anchored  = root[_T("date_anchored")].AsString(); //Date Anchored
-				
-				forPrint += _T("Date Anchored: ") 
-					+ date_anchored
-					+ _T("\n");
-			}
-
-			if( root[_T("comments")].IsValid() && !root[_T("comments")].IsNull() )
-			{
-				wxString comments  = root[_T("comments")].AsString(); //Comments
-				
-				forPrint += _T("Comments: ") 
-					+ comments
-					+ _T("\n");
-			}
-			
-			
-			
-			//wxMessageBox(forPrint);
-			details = forPrint;
-			_storeMarkerJsonDb(id, res);
+		details = _parseMarkerJson(json);
+		_storeMarkerJsonDb(id, json);
+		//wxMessageBox(details);
 	}
 	else
 	{
-		/*
-        wxString res;
-		wxStringOutputStream out_stream(&res);
-		httpStream->Read(out_stream);
-		*/
 		wxMessageBox( _T("Unable to connect: ") +
 			getErrorText(get.GetError(),get.GetResponse()) +
 			_T("\n") +
@@ -1059,6 +821,235 @@ wxString goodanchorage_pi::sendRequestPlus(int id){
 	get.Close();
 
 	return details;
+}
+
+
+wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
+	wxString forPrint;
+	wxJSONValue  root;
+	wxJSONReader reader;
+	int id;
+
+	// now read the JSON text and store it in the 'root' structure
+	// check for errors before retreiving values...
+	int numErrors = reader.Parse( res, &root );
+	if ( numErrors > 0  )  {
+		wxMessageBox(_T("!root.IsArray() ") + res);
+		return wxEmptyString;
+	}
+			
+	if( root[_T("id")].IsValid() && !root[_T("id")].IsNull() )
+		id = root[_T("id")].AsInt();
+				
+	if( root[_T("title")].IsValid() && !root[_T("title")].IsNull() )
+	{
+		wxString title = root[_T("title")].AsString(); //Anchorage Name
+		forPrint += _T("Anchorage Name: ") + title + _T("\n");
+	}
+
+	if( root[_T("title_alt")].IsValid() && !root[_T("title_alt")].IsNull() )
+	{
+		wxString title_alt = root[_T("title_alt")].AsString() ; //Alternative Name
+		forPrint += _T("Alternative Name: ") + title_alt + _T("\n");
+	}
+
+	if( root[_T("lat_lon")].IsValid() && !root[_T("lat_lon")].IsNull() )
+	{
+		wxJSONValue lat_lon = root[_T("lat_lon")];//Anchorage Position Single lat/lon pair
+					 
+		if ( !lat_lon.IsArray() ) 
+		{					
+			wxMessageBox(_T("!lat_lon.IsArray()) ") + res);						
+			return wxEmptyString;
+		}
+
+		double lat_i = lat_lon[0].AsDouble();
+		double lon_i = lat_lon[1].AsDouble();
+				
+		forPrint += _T("Anchorage Position: ") 
+					+ wxString::Format(wxT(" %.3f  "),lat_i)
+					+ wxString::Format(wxT(" %.3f"),lon_i)
+					+ _T("\n");
+	}
+			
+	if( root[_T("wp_lat_lon")].IsValid() && !root[_T("wp_lat_lon")].IsNull() )
+	{
+		wxJSONValue wp_lat_lon  = root[_T("wp_lat_lon")]; //Safe Waypoint(s) Multiple lat/lon pairs
+				
+		if ( !wp_lat_lon.IsArray() ) 
+		{					
+			wxMessageBox(_T("!wp_lat_lon.IsArray()) ") + res);						
+			return wxEmptyString;
+		}
+		forPrint += _T("Safe Waypoint(s): ") ;
+				
+		for(int i=0; i < wp_lat_lon.Size();i++)
+		{
+			double lat_wp_i = wp_lat_lon[i][0].AsDouble();
+			double lon_wp_i = wp_lat_lon[i][0].AsDouble();
+
+			forPrint += wxString::Format(wxT(" %.3f"),lat_wp_i)
+				+ wxString::Format(wxT(" %.3f"),lon_wp_i)
+				+ _T(" ; ");
+		}
+				
+		forPrint += _T("\n"); 
+	}
+
+	if( root[_T("depth_m")].IsValid() && !root[_T("depth_m")].IsNull() )
+	{
+		wxJSONValue depth_m_val = root[_T("depth_m")];
+		double depth_m;
+		if (depth_m_val.IsDouble()) {
+			depth_m = depth_m_val.AsDouble(); //Depth (m)
+		} else {
+			depth_m = depth_m_val.AsInt();
+		}
+				
+
+		forPrint += _T("Depth (m): ") 
+			+ wxString::Format(wxT(" %.1f"),depth_m)
+			+ _T("\n");
+	}
+
+	if( root[_T("depth_ft")].IsValid() && !root[_T("depth_ft")].IsNull() )
+	{
+		wxJSONValue depth_ft_val = root[_T("depth_ft")];
+		double depth_ft;
+		if (depth_ft_val.IsDouble()) {
+			depth_ft = depth_ft_val.AsDouble(); //Depth (ft)
+		} else {
+			depth_ft = depth_ft_val.AsInt();
+		}
+				
+		forPrint += _T("Depth (ft): ") 
+			+ wxString::Format(wxT(" %.0f"),depth_ft)
+			+ _T("\n");
+	}
+
+				
+	if( root[_T("is_deep")].IsValid() && !root[_T("is_deep")].IsNull() )
+		bool is_deep = root[_T("is_deep")].AsBool() ; //Don't show
+
+	if( root[_T("bottom")].IsValid() && !root[_T("bottom")].IsNull() )
+	{			
+		wxJSONValue bottom  = root[_T("bottom")]; //Bottom Composition
+				
+		forPrint += _T("Bottom Composition: ") ;
+		for(int i=0; i < bottom.Size();i++)
+		{
+			forPrint += bottom[i].AsString() + _T(" ");
+		}
+		forPrint += _T("\n"); 
+	}
+			
+	if( root[_T("prot_wind")].IsValid() && !root[_T("prot_wind")].IsNull() )
+	{
+		wxJSONValue prot_wind  = root[_T("prot_wind")]; //Protection from Wind
+				
+		forPrint += _T("Protection from Wind: ") ;
+		for(int i=0; i < prot_wind.Size();i++)
+		{
+			forPrint += prot_wind[i].AsString() + _T(" ");
+		}
+		forPrint += _T("\n"); 
+	}
+
+	if( root[_T("prot_swell")].IsValid() && !root[_T("prot_swell")].IsNull() )
+	{
+		wxJSONValue prot_swell  = root[_T("prot_swell")]; //Protection from Swell
+				
+		forPrint += _T("Protection from Swell: ") ;
+		for(int i=0; i < prot_swell.Size();i++)
+		{
+			forPrint += prot_swell[i].AsString() + _T(" ");
+		}
+		forPrint += _T("\n"); 
+	}
+
+	if( root[_T("navigation")].IsValid() && !root[_T("navigation")].IsNull() )
+	{
+		wxJSONValue navigation  = root[_T("navigation")]; //Navigation Assets
+				
+		forPrint += _T("Navigation Assets: ") ;
+		for(int i=0; i < navigation.Size();i++)
+		{
+			forPrint += navigation[i].AsString() + _T(" ");
+		}
+		forPrint += _T("\n"); 
+	}
+
+	if( root[_T("shore_access")].IsValid() && !root[_T("shore_access")].IsNull() )
+	{
+		wxJSONValue shore_access  = root[_T("shore_access")]; //Shore Access
+				
+		forPrint += _T("Shore Access: ") ;
+		for(int i=0; i < shore_access.Size();i++)
+		{
+			forPrint += shore_access[i].AsString() + _T(" ");
+		}
+		forPrint += _T("\n"); 
+	}
+
+	if( root[_T("closeby")].IsValid() && !root[_T("closeby")].IsNull() )
+	{
+		wxString closeby  = root[_T("closeby")].AsString(); //Close-by
+				
+		forPrint += _T("Close-by: ") 
+			+ closeby
+			+ _T("\n");
+	}
+
+	if( root[_T("nearby_town")].IsValid() && !root[_T("nearby_town")].IsNull() )
+	{
+		wxString nearby_town = root[_T("nearby_town")].AsString(); // Nearest Town(s)
+				
+		forPrint += _T("Nearest Town(s): ") 
+			+ nearby_town
+			+ _T("\n");
+	}
+
+	if( root[_T("dangers")].IsValid() && !root[_T("dangers")].IsNull() )
+	{
+		wxJSONValue dangers  = root[_T("dangers")]; //Dangers
+				
+		forPrint += _T("Dangers: ") ;
+		for(int i=0; i < dangers.Size();i++)
+		{
+			forPrint += dangers[i].AsString() + _T(" ");
+		}
+		forPrint += _T("\n"); 
+	}
+
+	if( root[_T("country")].IsValid() && !root[_T("country")].IsNull() )
+	{
+		wxString country  = root[_T("country")].AsString(); //Country
+				
+		forPrint += _T("Country: ") 
+			+ country
+			+ _T("\n");
+	}
+
+	if( root[_T("date_anchored")].IsValid() && !root[_T("date_anchored")].IsNull() )
+	{
+		wxString date_anchored  = root[_T("date_anchored")].AsString(); //Date Anchored
+				
+		forPrint += _T("Date Anchored: ") 
+			+ date_anchored
+			+ _T("\n");
+	}
+
+	if( root[_T("comments")].IsValid() && !root[_T("comments")].IsNull() )
+	{
+		wxString comments  = root[_T("comments")].AsString(); //Comments
+				
+		forPrint += _T("Comments: ") 
+			+ comments
+			+ _T("\n");
+	}
+	//wxMessageBox(forPrint);
+
+	return forPrint;
 }
 
 
@@ -1216,7 +1207,7 @@ void goodanchorage_pi::_storeMarkerJsonDb(int id, wxString json) {
 
 
 wxString goodanchorage_pi::_loadMarkerDetailsDb(int id) {
-	wxString json;
+	wxString json, details;
 	int updated;	// TODO: convert to UTC date and add to the extracted marker data
 	char *sql = "SELECT json, updated FROM anchor_point WHERE id = ?;";
 	sqlite3_stmt *stmt;
@@ -1224,22 +1215,24 @@ wxString goodanchorage_pi::_loadMarkerDetailsDb(int id) {
 	if( rc != SQLITE_OK ){
       wxMessageBox(wxString::Format(wxT("Failed to fetch Anchorage details: %s"), sqlite3_errmsg(gaDb)));
 	  sqlite3_finalize(stmt);
-	  return json;
+	  return wxEmptyString;
 	}
 
 	if (sqlite3_bind_int(stmt, 1, id) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind ID while loading locally stored anchorage"));
 		sqlite3_finalize(stmt);
-		return json;
+		return wxEmptyString;
 	}
 
     if (sqlite3_step(stmt) == SQLITE_ROW) {
 		json = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+		if (!json.IsNull()) details = _parseMarkerJson(json);
+		else details = _T("No details found in local storage for this anchorage.");
 		updated = sqlite3_column_int(stmt, 0);
     }
 	sqlite3_finalize(stmt);
 
-	return json;
+	return details;
 }
 
 

@@ -131,6 +131,7 @@ private:
 	bool _initAuthFile(void);
 	void _storeMarkerDb(MyMarkerType);
 	void _storeMarkerJsonDb(int, wxString);
+	wxString _parseMarkerJson(wxString);
 	void _loadMarkersDb();
 	wxString _loadMarkerDetailsDb(int);
 };
