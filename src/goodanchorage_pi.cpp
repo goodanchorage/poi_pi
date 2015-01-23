@@ -92,41 +92,40 @@ int goodanchorage_pi::Init(void)
     m_parent_window = GetOCPNCanvasWindow();
 	initLoginDialog(m_parent_window);
 
-      AddLocaleCatalog( _T("opencpn-goodanchorage_pi") );
+	AddLocaleCatalog( _T("opencpn-goodanchorage_pi") );
 
-      //    Get a pointer to the opencpn configuration object
-      m_pconfig = GetOCPNConfigObject();
+	// Get a pointer to the opencpn configuration object
+	m_pconfig = GetOCPNConfigObject();
 
-      // Get a pointer to the opencpn display canvas, to use as a parent for the GoodAnchorage dialog
-      m_parent_window = GetOCPNCanvasWindow();
+	// Get a pointer to the opencpn display canvas, to use as a parent for the GoodAnchorage dialog
+	m_parent_window = GetOCPNCanvasWindow();
 	  
-      AddCustomWaypointIcon(_img_ga_anchor, _T("_img_ga_anchor"), _T("Good Anchorage"));	 
+	AddCustomWaypointIcon(_img_ga_anchor, _T("_img_ga_anchor"), _T("Good Anchorage"));
 
+	// This PlugIn needs a toolbar icon, so request its insertion if enabled locally
+	m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_toolbar, _img_ga_toolbar, wxITEM_CHECK,
+						_("GoodAnchorage"), _T(""), NULL, GOODANCHORAGE_TOOL_POSITION, 0, this);
+	if (!_initPluginDir()) {
+		wxMessageBox(_T("Error locating plugin data directory.\nGoodAnchorage plugin will not run properly."),
+					_T("GoodAnchorage Plugin"), wxICON_ERROR);
+	} else if (!_initDb()) {
+		wxMessageBox(_T("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
+					_T("GoodAnchorage Plugin"), wxICON_ERROR);
+	} else if (!_initAuthFile()) {
+		wxMessageBox(_T("Error creating authentication file.\nGoodAnchorage plugin will not run properly."),
+					_T("GoodAnchorage Plugin"), wxICON_ERROR);
+	}
 
-      //    This PlugIn needs a toolbar icon, so request its insertion if enabled locally
-      m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_toolbar, _img_ga_toolbar, wxITEM_CHECK,
-                            _("GoodAnchorage"), _T(""), NULL, GOODANCHORAGE_TOOL_POSITION, 0, this);
-	  if (!_initPluginDir()) {
-		  wxMessageBox(_T("Error locating plugin data directory.\nGoodAnchorage plugin will not run properly."),
-						_T("GoodAnchorage Plugin"), wxICON_ERROR);
-	  } else if (!_initDb()) {
-		  wxMessageBox(_T("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
-						_T("GoodAnchorage Plugin"), wxICON_ERROR);
-	  } else if (!_initAuthFile()) {
-		  wxMessageBox(_T("Error creating authentication file.\nGoodAnchorage plugin will not run properly."),
-						_T("GoodAnchorage Plugin"), wxICON_ERROR);
-	  }
-
-      return (WANTS_OVERLAY_CALLBACK |
-              WANTS_OPENGL_OVERLAY_CALLBACK |
-              WANTS_CURSOR_LATLON       |
-              WANTS_TOOLBAR_CALLBACK    |
-              INSTALLS_TOOLBAR_TOOL     |
-              WANTS_CONFIG              |
-              //WANTS_PREFERENCES         |
-              WANTS_PLUGIN_MESSAGING    |
-              WANTS_MOUSE_EVENTS
-            );
+	return (WANTS_OVERLAY_CALLBACK |
+			WANTS_OPENGL_OVERLAY_CALLBACK |
+			WANTS_CURSOR_LATLON       |
+			WANTS_TOOLBAR_CALLBACK    |
+			INSTALLS_TOOLBAR_TOOL     |
+			WANTS_CONFIG              |
+			//WANTS_PREFERENCES         |
+			WANTS_PLUGIN_MESSAGING    |
+			WANTS_MOUSE_EVENTS
+		);
 }
 
 
@@ -211,30 +210,36 @@ bool goodanchorage_pi::DeInit(void)
     return true;
 }
 
+
 int goodanchorage_pi::GetAPIVersionMajor()
 {
       return MY_API_VERSION_MAJOR;
 }
+
 
 int goodanchorage_pi::GetAPIVersionMinor()
 {
       return MY_API_VERSION_MINOR;
 }
 
+
 int goodanchorage_pi::GetPlugInVersionMajor()
 {
       return PLUGIN_VERSION_MAJOR;
 }
+
 
 int goodanchorage_pi::GetPlugInVersionMinor()
 {
       return PLUGIN_VERSION_MINOR;
 }
 
+
 wxBitmap *goodanchorage_pi::GetPlugInBitmap()
 {
       return _img_ga_toolbar;
 }
+
 
 wxString goodanchorage_pi::GetCommonName()
 {
@@ -264,6 +269,7 @@ int goodanchorage_pi::GetToolbarToolCount(void)
 {
       return 1;
 }
+
 
 bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 {
@@ -309,7 +315,6 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 				wxMessageBox(_T("Switching to OFFLINE mode."));
 			}
 		} else {
-			// TODO: instead of JSON return a marker text ready for display
 			details = _loadMarkerDetailsDb(m_ActiveMyMarker->serverId);
 			if (details.IsNull()) {
 				details = _T("No locally stored data available for this anchorage.");
@@ -329,13 +334,14 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 	}
 	else
 		return false;
-    
 }
+
 
 void goodanchorage_pi::ShowPreferencesDialog( wxWindow* parent )
 {
     
 }
+
 
 void goodanchorage_pi::OnToolbarToolCallback(int id)
 {
@@ -383,36 +389,10 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 		isPlugInActive = true;
 		//::wxBeginBusyCursor();
 	}
-
-	/*
-	PlugIn_Waypoint *pwaypoint = new PlugIn_Waypoint( 0.0, 0.0,
-                    _T("icon_ident"), _T("wp_name"),
-                     _T("GUID") );				 
-	AddSingleWaypoint(  pwaypoint,  true);
-
-	
-	PlugIn_Waypoint *pwaypoint1 = new PlugIn_Waypoint( 0.1, 0.1,
-                    _T("icon_ident"), _T("wp_name"),
-                     _T("GUID1") );				 
-	AddSingleWaypoint(  pwaypoint1,  true);
-
-	
-	PlugIn_Waypoint *pwaypoint2 = new PlugIn_Waypoint( 0.5, 0.5,
-                    _T("icon_ident"), _T("wp_name"),
-                     _T("GUID2") );					 
-	AddSingleWaypoint(  pwaypoint2,  true);
-	
-	
-	myMap["GUID"] = pwaypoint;
-	myMap["GUID1"] = pwaypoint1;
-	myMap["GUID2"] = pwaypoint2;
-	
-	*/
 	
     RequestRefresh(m_parent_window); // refresh main window
 	//m_parent_window->SetCursor(wxCURSOR_CROSS);
 }
-
 
 
 bool goodanchorage_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
@@ -421,42 +401,36 @@ bool goodanchorage_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
     return true;
 }
 
+
 bool goodanchorage_pi::RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp)
 {
     m_vp = *vp;
     return true;
 }
 
+
 void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 {
-
-
-	if(!isPlugInActive)
-		return ;
-		
+	if(!isPlugInActive) return;
 	
-		
 	wxPoint cur;
     GetCanvasPixLL( &m_vp, &cur, lat, lon );
-	
-	
+
+	// TODO: review -- this may not be fast enough. Maybe because of the loop,
+	// or perhaps because of frequency of calls to SetCursorLatLon. In either case,
+	// the active marker takes a while to be found.
 	bool changeMarkerFlag = false;
 	for (std::vector<MyMarkerType>::iterator it = markersList.begin() ; it != markersList.end(); ++it)
-	//for (std::map<std::string,PlugIn_Waypoint*>::iterator it=myMap.begin(); it!=myMap.end(); ++it)
 	{
-		
-		//PlugIn_Waypoint *marker = it->second;
 		PlugIn_Waypoint *marker = it->pluginWaypoint;
 		
-		 if(  PointInLLBox( &m_vp,  marker->m_lon, marker->m_lat ) ) // !!!!!!!!!!!!!!! x == lon  and y = lat !!!!!!!!
-		 {
-		 			
+		if(  PointInLLBox( &m_vp,  marker->m_lon, marker->m_lat ) ) // !!!!!!!!!!!!!!! x == lon  and y = lat !!!!!!!!
+		{
 			//wxMessageBox(wxString::Format(wxT("%f"),marker->m_lat) + _T(" ") +wxString::Format(wxT("%f"),marker->m_lon));
 			wxPoint pl;
             GetCanvasPixLL( &m_vp, &pl, marker->m_lat, marker->m_lon );
             if (pl.x > cur.x - 10 && pl.x < cur.x + 10 && pl.y > cur.y - 10 && pl.y < cur.y + 10)
             {
-			
 				if(m_ActiveMyMarker != NULL)
 				{
 					m_ActiveMyMarker->pluginWaypoint->m_MarkName = _T("");
@@ -472,7 +446,7 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 				
                 break;
             }
-		 }
+		}
 	}
 	
 	if(	!changeMarkerFlag	)
@@ -486,8 +460,8 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 		m_ActiveMarker = NULL;
 		m_ActiveMyMarker = NULL;
 	}
-  
 }
+
 
 bool goodanchorage_pi::PointInLLBox( PlugIn_ViewPort *vp, double x, double y )
 {
@@ -497,7 +471,7 @@ bool goodanchorage_pi::PointInLLBox( PlugIn_ViewPort *vp, double x, double y )
     double m_miny = vp->lat_min;
     double m_maxy = vp->lat_max;
 
-    //    Box is centered in East lon, crossing IDL
+    //   Box is centered in East lon, crossing IDL
     if(m_maxx > 180.)
     {
         if( x < m_maxx - 360.)
@@ -539,6 +513,7 @@ bool goodanchorage_pi::PointInLLBox( PlugIn_ViewPort *vp, double x, double y )
 	*/
 }
 
+
 void goodanchorage_pi::OnContextMenuItemCallback(int id)
 {
    
@@ -556,6 +531,7 @@ void goodanchorage_pi::SendTimelineMessage(wxDateTime time)
    
 }
 
+
 bool goodanchorage_pi::sendRequest(double lat,double lon){
 	bool isLoaded;
 	double m_minx = m_vp.lon_min;
@@ -569,8 +545,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 	 wxString::Format(wxT("m_miny = %f "),m_miny)+
 	 wxString::Format(wxT("m_maxy = %f "),m_maxy)
 	 );*/
-	 
-	
+
 	cleanMarkerList();
 
 	wxHTTP get;
@@ -595,67 +570,56 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 		wxString res;
 		wxStringOutputStream out_stream(&res);
 		httpStream->Read(out_stream);
-	 
-	 
-		// construct the JSON root object
-            wxJSONValue  root;
-        // construct a JSON parser
-            wxJSONReader reader;
+
+		wxJSONValue  root;
+		wxJSONReader reader;
 
         // now read the JSON text and store it in the 'root' structure
         // check for errors before retreiving values...
-            int numErrors = reader.Parse( res, &root );
-            if ( numErrors > 0 || !root.IsArray() )  {
-				
-				wxMessageBox(_T("!root.IsArray() ") + res);
-				
-                return false;
-            }
-			
-			
-			for ( int i = 0; i < root.Size(); i++ )  {
-				wxJSONValue lat_lon = root[i][_T("lat_lon")];
-				 
-				if ( !lat_lon.IsArray() ) {
-					wxMessageBox(res);	
-					continue;
-				}
+		int numErrors = reader.Parse( res, &root );
+		if ( numErrors > 0 || !root.IsArray() )  {
+			wxMessageBox(_T("!root.IsArray() ") + res);
+			return false;
+		}
 
-				bool is_deep =  root[i][_T("is_deep")].AsBool();
-				int id = root[i][_T("id")].AsInt();
-				wxString title = root[i][_T("title")].AsString();
-				wxString path = root[i][_T("path")].AsString();
-
-				double lat_i = lat_lon[0].AsDouble();
-				double lon_i = lat_lon[1].AsDouble();
-
-				MyMarkerType newMarker;
-				
-				newMarker.serverDeep = is_deep;
-				newMarker.serverId = id;
-				newMarker.serverTitle = root[i][_T("title")].AsString();
-				newMarker.serverPath = root[i][_T("path")].AsString();
-				newMarker.serverLat = lat_i;
-				newMarker.serverLon = lon_i;
-				
-				PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( lat_i, lon_i,
-                    _T("_img_ga_anchor"), _T("") ,
-                      GetNewGUID()  );
-				//bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
-				bufWayPoint->m_MarkDescription = 
-								wxT("Right click on the marker to load details.\n")
-								wxT("Slow network delays data loading.");
-				newMarker.pluginWaypoint = bufWayPoint;
-				
-				markersList.push_back(newMarker);
-				_storeMarkerDb(newMarker);
+		for ( int i = 0; i < root.Size(); i++ )  {
+			wxJSONValue lat_lon = root[i][_T("lat_lon")];	 
+			if ( !lat_lon.IsArray() ) {
+				wxMessageBox(res);	
+				continue;
 			}
-			
-			
-			showMarkerList();
-			isLoaded = true;
-		
-		
+
+			bool is_deep =  root[i][_T("is_deep")].AsBool();
+			int id = root[i][_T("id")].AsInt();
+			wxString title = root[i][_T("title")].AsString();
+			wxString path = root[i][_T("path")].AsString();
+
+			double lat_i = lat_lon[0].AsDouble();
+			double lon_i = lat_lon[1].AsDouble();
+
+			MyMarkerType newMarker;
+			newMarker.serverDeep = is_deep;
+			newMarker.serverId = id;
+			newMarker.serverTitle = root[i][_T("title")].AsString();
+			newMarker.serverPath = root[i][_T("path")].AsString();
+			newMarker.serverLat = lat_i;
+			newMarker.serverLon = lon_i;
+				
+			PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( lat_i, lon_i,
+                _T("_img_ga_anchor"), _T("") ,
+                    GetNewGUID()  );
+			//bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
+			bufWayPoint->m_MarkDescription = 
+							wxT("Right click on the marker to load details.\n")
+							wxT("Slow network delays data loading.");
+			newMarker.pluginWaypoint = bufWayPoint;
+				
+			markersList.push_back(newMarker);
+			_storeMarkerDb(newMarker);
+		}
+
+		showMarkerList();
+		isLoaded = true;
 	}
 	else
 	{
@@ -673,7 +637,6 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 
 	return isLoaded;
 }
-
 
 
 void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
@@ -738,6 +701,7 @@ void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 	return;
 }
 
+
 void goodanchorage_pi::_loadMarkersDb() {
 	// load them all -- don't worry about lat/lon for this version
 	char *sql = "SELECT id, lat, lon, is_deep, title, path FROM anchor_point;";
@@ -749,7 +713,6 @@ void goodanchorage_pi::_loadMarkersDb() {
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
 		MyMarkerType newMarker;
-		
 		newMarker.serverId = sqlite3_column_int(stmt, 0);
 		newMarker.serverLat = sqlite3_column_double(stmt, 1);
 		newMarker.serverLon = sqlite3_column_double(stmt, 2);
@@ -758,7 +721,7 @@ void goodanchorage_pi::_loadMarkersDb() {
 		newMarker.serverPath = wxString(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)), wxConvUTF8);
 		PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( newMarker.serverLat, 
 				newMarker.serverLon, _T("_img_ga_anchor"), _T(""), GetNewGUID()  );
-		// TODO: not linking???
+		// TODO: not linking when compiling???
 		if (!newMarker.serverPath.IsNull()) {
 			Plugin_Hyperlink *plink = new Plugin_Hyperlink;
 			plink->DescrText = wxEmptyString;
@@ -768,7 +731,6 @@ void goodanchorage_pi::_loadMarkersDb() {
 			//bufWayPoint->m_HyperlinkList->Insert(plink);
 		}
 
-		//bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
 		newMarker.pluginWaypoint = bufWayPoint;
 		markersList.push_back(newMarker);
     }
@@ -776,7 +738,6 @@ void goodanchorage_pi::_loadMarkersDb() {
 
 	return;
 }
-
 
 
 wxString goodanchorage_pi::sendRequestPlus(int id){
@@ -792,7 +753,7 @@ wxString goodanchorage_pi::sendRequestPlus(int id){
 	 
 	wxApp::IsMainLoopRunning(); // should return true
 	 
-	 //goodanchorage.com/api/v1/anchor_list/
+	//goodanchorage.com/api/v1/anchor_list/
 	// use _T("/") for index.html, index.php, default.asp, etc.
 	wxInputStream *httpStream = get.GetInputStream( _T("/api/v1/anchor_point/") + wxString::Format(wxT("%d.json"),id)  );
 	 
@@ -1085,50 +1046,39 @@ void CustomDialog::sendRequestAuth(wxString login, wxString password)
         wxString res;
         wxStringOutputStream out_stream(&res);
         httpStream->Read(out_stream);
-       // wxMessageBox(res);
-		
-	
-	 
-		// construct the JSON root object
-            wxJSONValue  root;
-        // construct a JSON parser
-            wxJSONReader reader;
+		// wxMessageBox(res);
+
+		wxJSONValue  root;
+		wxJSONReader reader;
 
         // now read the JSON text and store it in the 'root' structure
         // check for errors before retreiving values...
-            int numErrors = reader.Parse( res, &root );
-            if ( numErrors > 0  )  {
-				
-				wxMessageBox(_T("reader  ERR0R:") + res);
-				
-                return;
-            }
-			
-			
-			if( root[_T("sessid")].IsValid() && !root[_T("sessid")].IsNull() )
-			{
-				wxString sessid = root[_T("sessid")].AsString();	
+		int numErrors = reader.Parse( res, &root );
+		if ( numErrors > 0  )  {
+			wxMessageBox(_T("reader  ERR0R:") + res);
+			return;
+		}
+		
+		if( root[_T("sessid")].IsValid() && !root[_T("sessid")].IsNull() )
+		{
+			wxString sessid = root[_T("sessid")].AsString();	
 
-				gaAuthFile->AddLine( sessid );
-			}
-				
-			if( root[_T("session_name")].IsValid() && !root[_T("session_name")].IsNull() )
-			{
-				wxString session_name = root[_T("session_name")].AsString();
+			gaAuthFile->AddLine( sessid );
+		}
 
-				gaAuthFile->AddLine( session_name );				
-			}
-				
-			if( root[_T("token")].IsValid() && !root[_T("token")].IsNull() )
-			{
-				wxString token = root[_T("token")].AsString();	
+		if( root[_T("session_name")].IsValid() && !root[_T("session_name")].IsNull() )
+		{
+			wxString session_name = root[_T("session_name")].AsString();
 
-				gaAuthFile->AddLine( token );
-			}
-			
-			
-	
-        
+			gaAuthFile->AddLine( session_name );				
+		}
+
+		if( root[_T("token")].IsValid() && !root[_T("token")].IsNull() )
+		{
+			wxString token = root[_T("token")].AsString();	
+
+			gaAuthFile->AddLine( token );
+		}  
     }
     else
     {
@@ -1144,8 +1094,8 @@ void CustomDialog::sendRequestAuth(wxString login, wxString password)
 
     wxDELETE(httpStream);
     http.Close();
-
 }
+
 
 wxString getErrorText(int errorID,int codeID)
 {
@@ -1249,6 +1199,7 @@ void goodanchorage_pi::cleanMarkerList(void)
 	markersList.clear();
 }
 
+
 void goodanchorage_pi::showMarkerList(void)
 {
 
@@ -1258,8 +1209,6 @@ void goodanchorage_pi::showMarkerList(void)
 	}
 }
 	
-	
-
 
 MyMarkerType::MyMarkerType(void){}
 MyMarkerType::~MyMarkerType(void){}
@@ -1293,57 +1242,53 @@ void goodanchorage_pi::initLoginDialog(wxWindow* parent)
 CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
        : wxDialog(parent, -1, title, wxDefaultPosition, wxSize(250, 230))
 {
+	wxBoxSizer *verticalBox = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer *buttonsHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
+  
+	wxBoxSizer *loginHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer *passwordHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
+	//TODO: add Register link to the dialog
+	wxStaticText *loginTitle = new wxStaticText(this, -1, wxT("Login:"));
+	wxStaticText *passwordTitle = new wxStaticText(this, -1, wxT("Password:"));
+  
+	loginTextCtrl = new wxTextCtrl(this, -1);
+	passwordTextCtrl = new wxTextCtrl(this, -1);
+  
+	loginHorithontalBox->Add(loginTitle,1);
+	loginHorithontalBox->Add(loginTextCtrl,1, wxLEFT, 5);
+  
+	passwordHorithontalBox->Add(passwordTitle,-1);
+	passwordHorithontalBox->Add(passwordTextCtrl,-1);
+  
+	wxButton *okButton = new wxButton(this, LOGIN_BUTTON_ID, wxT("Ok"), 
+		wxDefaultPosition, wxSize(70, 30));
+	  
+	Connect(LOGIN_BUTTON_ID, wxEVT_COMMAND_BUTTON_CLICKED, 
+		wxCommandEventHandler(CustomDialog::onLogin));
 
+	wxButton *closeButton = new wxButton(this, wxID_EXIT, wxT("Cancel"), 
+		wxDefaultPosition, wxSize(70, 30));
+	  
+	Connect(wxID_EXIT, wxEVT_COMMAND_BUTTON_CLICKED, 
+		wxCommandEventHandler(CustomDialog::onQuit));
+	  
+	buttonsHorithontalBox->Add(okButton, 1);
+	buttonsHorithontalBox->Add(closeButton, 1, wxLEFT, 5);
+
+	verticalBox->Add(loginHorithontalBox, 1);
+	verticalBox->Add(passwordHorithontalBox, 1);
+	verticalBox->Add(buttonsHorithontalBox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
  
-
-  wxBoxSizer *verticalBox = new wxBoxSizer(wxVERTICAL);
-  wxBoxSizer *buttonsHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
-  
-  wxBoxSizer *loginHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
-  wxBoxSizer *passwordHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
-  //TODO: add Register link to the dialog
-  wxStaticText *loginTitle = new wxStaticText(this, -1, wxT("Login:"));
-  wxStaticText *passwordTitle = new wxStaticText(this, -1, wxT("Password:"));
-  
-   loginTextCtrl = new wxTextCtrl(this, -1);
-   passwordTextCtrl = new wxTextCtrl(this, -1);
-
-  
-  loginHorithontalBox->Add(loginTitle,1);
-  loginHorithontalBox->Add(loginTextCtrl,1, wxLEFT, 5);
-  
-  passwordHorithontalBox->Add(passwordTitle,-1);
-  passwordHorithontalBox->Add(passwordTextCtrl,-1);
-  
-  wxButton *okButton = new wxButton(this, LOGIN_BUTTON_ID, wxT("Ok"), 
-      wxDefaultPosition, wxSize(70, 30));
-	  
-  Connect(LOGIN_BUTTON_ID, wxEVT_COMMAND_BUTTON_CLICKED, 
-      wxCommandEventHandler(CustomDialog::onLogin));
-
-  wxButton *closeButton = new wxButton(this, wxID_EXIT, wxT("Cancel"), 
-      wxDefaultPosition, wxSize(70, 30));
-	  
-  Connect(wxID_EXIT, wxEVT_COMMAND_BUTTON_CLICKED, 
-      wxCommandEventHandler(CustomDialog::onQuit));
-	  
-  buttonsHorithontalBox->Add(okButton, 1);
-  buttonsHorithontalBox->Add(closeButton, 1, wxLEFT, 5);
-
-  verticalBox->Add(loginHorithontalBox, 1);
-  verticalBox->Add(passwordHorithontalBox, 1);
-  verticalBox->Add(buttonsHorithontalBox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
- 
-  SetSizer(verticalBox);
-
-  
+	SetSizer(verticalBox);
 }
+
 
 void CustomDialog::onQuit(wxCommandEvent & WXUNUSED(event))
 {
 	//SetToolbarItemState( m_leftclick_tool_id, false );
     Close(true);
 }
+
 
 void CustomDialog::onLogin(wxCommandEvent & WXUNUSED(event))
 {
