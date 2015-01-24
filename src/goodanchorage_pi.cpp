@@ -132,10 +132,15 @@ int goodanchorage_pi::Init(void)
 
 bool goodanchorage_pi::_initPluginDir(void) {
 	wxString ga_dir = *GetpPrivateApplicationDataLocation();
+	ga_dir.Append(wxFileName::GetPathSeparator());
 	ga_dir.Append(_T("plugins"));
 	ga_dir.Append(wxFileName::GetPathSeparator());
 	ga_dir.Append(_T("goodanchorage"));
-	if (!wxDir::Exists(ga_dir)) { wxFileName::Mkdir(ga_dir); }
+	//wxMessageBox(_T("Looking for GA data directory in ") + ga_dir);
+	if (!wxDir::Exists(ga_dir) && !wxFileName::Mkdir(ga_dir, 0755, wxPATH_MKDIR_FULL)) {
+		wxLogMessage(_T("Failed to create GA data directory in ") + ga_dir);
+		return false;
+	}
 
 	m_PluginDir = ga_dir;
 	return true;
@@ -159,7 +164,7 @@ bool goodanchorage_pi::_initDb(void) {
 
 		char *errMsg;
 		wxString _errMsg;
-		char *sql = "SELECT id FROM anchor_point LIMIT 1";
+		char const *sql = "SELECT id FROM anchor_point LIMIT 1";
 		rc = sqlite3_exec(gaDb, sql, NULL, NULL, &errMsg);
 		if (rc != SQLITE_OK && errMsg != NULL) {
 			_errMsg = wxString::FromUTF8(errMsg);
@@ -528,17 +533,6 @@ void goodanchorage_pi::SendTimelineMessage(wxDateTime time)
 
 bool goodanchorage_pi::sendRequest(double lat,double lon){
 	bool isLoaded;
-	double m_minx = m_vp.lon_min;
-    double m_maxx = m_vp.lon_max;
-    double m_miny = m_vp.lat_min;
-    double m_maxy = m_vp.lat_max;
-	
-	/*wxMessageBox(
-	 wxString::Format(wxT("m_minx = %f "),m_minx)+
-	 wxString::Format(wxT("m_maxx = %f "),m_maxx)+
-	 wxString::Format(wxT("m_miny = %f "),m_miny)+
-	 wxString::Format(wxT("m_maxy = %f "),m_maxy)
-	 );*/
 
 	cleanMarkerList();
 
@@ -637,7 +631,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 
 void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 	// insert or update while keeping existing values: json and updated
-	char *sql = "INSERT OR REPLACE INTO anchor_point (id, lat, lon, is_deep, title, path, json, updated) "
+	char const *sql = "INSERT OR REPLACE INTO anchor_point (id, lat, lon, is_deep, title, path, json, updated) "
 			"VALUES (?, ?, ?, ?, ?, ?, "
 			"(SELECT json FROM anchor_point WHERE id = ?), "
 			"(SELECT updated FROM anchor_point WHERE id = ?));";
@@ -700,7 +694,7 @@ void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
 
 void goodanchorage_pi::_loadMarkersDb() {
 	// load them all -- don't worry about lat/lon for this version
-	char *sql = "SELECT id, lat, lon, is_deep, title, path FROM anchor_point;";
+	char const *sql = "SELECT id, lat, lon, is_deep, title, path FROM anchor_point;";
 	sqlite3_stmt *stmt;
 	int rc = sqlite3_prepare_v2(gaDb, sql, -1, &stmt, 0);
 	if( rc != SQLITE_OK ){
@@ -795,8 +789,10 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 		return wxEmptyString;
 	}
 			
-	if( root[_T("id")].IsValid() && !root[_T("id")].IsNull() )
+	if( root[_T("id")].IsValid() && !root[_T("id")].IsNull() ) {
 		id = root[_T("id")].AsInt();
+		(void)id;
+	}
 				
 	if( root[_T("title")].IsValid() && !root[_T("title")].IsNull() )
 	{
@@ -885,8 +881,10 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 	}
 
 				
-	if( root[_T("is_deep")].IsValid() && !root[_T("is_deep")].IsNull() )
+	if( root[_T("is_deep")].IsValid() && !root[_T("is_deep")].IsNull() ) {
 		bool is_deep = root[_T("is_deep")].AsBool() ; //Don't show
+		(void)is_deep;
+	}
 
 	if( root[_T("bottom")].IsValid() && !root[_T("bottom")].IsNull() )
 	{			
@@ -1121,7 +1119,7 @@ wxString getErrorText(int errorID,int codeID)
 
 void goodanchorage_pi::_storeMarkerJsonDb(int id, wxString json) {
 	// insert or update while keeping existing values: json and updated
-	char *sql = "UPDATE anchor_point SET json = ?, updated = ? WHERE id = ?;";
+	char const *sql = "UPDATE anchor_point SET json = ?, updated = ? WHERE id = ?;";
 	sqlite3_stmt *stmt;
 	if ( sqlite3_prepare(gaDb, sql, -1, &stmt, 0) != SQLITE_OK) {
 		wxMessageBox(_T("Failed prepare to update Anchorage in local storage"));
@@ -1158,7 +1156,7 @@ void goodanchorage_pi::_storeMarkerJsonDb(int id, wxString json) {
 wxString goodanchorage_pi::_loadMarkerDetailsDb(int id) {
 	wxString json, details;
 	int updated;	// TODO: convert to UTC date and add to the extracted marker data
-	char *sql = "SELECT json, updated FROM anchor_point WHERE id = ?;";
+	char const *sql = "SELECT json, updated FROM anchor_point WHERE id = ?;";
 	sqlite3_stmt *stmt;
 	int rc = sqlite3_prepare_v2(gaDb, sql, -1, &stmt, 0);
 	if( rc != SQLITE_OK ){
@@ -1178,6 +1176,7 @@ wxString goodanchorage_pi::_loadMarkerDetailsDb(int id) {
 		if (!json.IsNull()) details = _parseMarkerJson(json);
 		else details = _T("No details found in local storage for this anchorage.");
 		updated = sqlite3_column_int(stmt, 0);
+		(void)updated;
     }
 	sqlite3_finalize(stmt);
 

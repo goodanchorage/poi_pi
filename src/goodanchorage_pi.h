@@ -1,7 +1,7 @@
 
 
-#ifndef _MYPLUGIN_H_
-#define _MYPLUGIN_H_
+#ifndef _GOODANCHORAGEPI_H_
+#define _GOODANCHORAGEPI_H_
 
 #include "wx/wxprec.h"
 
