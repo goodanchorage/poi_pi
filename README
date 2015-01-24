@@ -2,7 +2,12 @@ GoodAnchorage.com plug-in for OpenCPN
 
 Installation
 
-Windows: http://goodanchorage.com/download/goodanchorage_pi-0.2-win32.exe
+Windows Installer: http://goodanchorage.com/download/goodanchorage_pi-0.2-win32.exe
+Windows DLLs:
+   1. Copy 'sqlite3.dll' to OpenCPN folder (C:\Program Files (x86)\OpenCPN):
+      http://goodanchorage.com/download/sqlite3.dll
+   2. Copy 'goodanchorage_pi.dll' to Plugins folder (C:\Program Files (x86)\OpenCPN\plugins):
+      http://goodanchorage.com/download/goodanchorage_pi.dll
 
 
 Development
