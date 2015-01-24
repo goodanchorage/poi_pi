@@ -26,7 +26,6 @@ SET(SRC_GOODANCHORAGEPLUGIN
       src/goodanchorage_pi.cpp
       src/icons.h
       src/icons.cpp
-      src/sqlite/sqlite3.h
 	  src/wx/json_defs.h
 	  src/wx/jsonreader.h
 	  src/wx/jsonval.h
@@ -35,7 +34,12 @@ SET(SRC_GOODANCHORAGEPLUGIN
 	  src/wxJSON/jsonval.cpp
 	  src/wxJSON/jsonwriter.cpp
     )
-ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_GOODANCHORAGEPLUGIN})
+IF(WIN32)
+    SET(SRC_LSQLITE
+        src/sqlite/sqlite3.h
+    )
+ENDIF(WIN32)
+ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_GOODANCHORAGEPLUGIN} ${SRC_LSQLITE})
 
 INCLUDE("cmake/PluginInstall.cmake")
 INCLUDE("cmake/PluginSQLite.cmake")
