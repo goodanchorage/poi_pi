@@ -111,7 +111,8 @@ int goodanchorage_pi::Init(void)
 	} else if (!_initDb()) {
 		wxMessageBox(_T("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
 					_T("GoodAnchorage Plugin"), wxICON_ERROR);
-	} else if (!_initAuthFile()) {
+	}
+	if (!_initAuthFile()) {
 		wxMessageBox(_T("Error creating authentication file.\nGoodAnchorage plugin will not run properly."),
 					_T("GoodAnchorage Plugin"), wxICON_ERROR);
 	}
@@ -371,7 +372,7 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 		isOnline = wxApp::IsMainLoopRunning(); // should return true
 		get.Close();
 
-		if (isOnline) {
+		if (isOnline && gaAuthFile) {
 			// login box if no auth info in the auth file
 			gaAuthFile->Open();
 			if( gaAuthFile->Eof() )
