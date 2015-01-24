@@ -11,7 +11,7 @@
 #include <wx/fileconf.h>
 #include <wx/stdpaths.h>
 
-////////////////////////////////////////////////
+//////////////////////////////////////////////////
 #include <wx/sstream.h>
 #include <wx/protocol/http.h>
 #include <wx/jsonreader.h>
