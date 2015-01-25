@@ -18,8 +18,8 @@
 #include <wx/textfile.h>
 #include <wx/wfstream.h>
 #include <wx/txtstrm.h>
-#include <wx/utils.h> // ardmn
-#include <wx/hyperlink.h> // ardmn
+#include <wx/utils.h> 
+#include <wx/hyperlink.h> 
 //////////////////////////////////////////
 
 #include "goodanchorage_pi.h"
@@ -1236,16 +1236,16 @@ wxString MyMarkerType::getMarkerTitle(void)
 void goodanchorage_pi::initLoginDialog(wxWindow* parent)
 {
 
-	loginDialog = new CustomDialog(wxT("GoodAnchorage.com Account"),parent);	
+	loginDialog = new CustomDialog(wxT("GoodAnchorage Access"),parent);	
 }
 
 
 CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
-       : wxDialog(parent, -1, title, wxDefaultPosition, wxSize(250, 180))// ardmn
+       : wxDialog(parent, -1, title, wxDefaultPosition, wxSize(280, 200))
 {
 	
-	wxFlexGridSizer *fgs = new wxFlexGridSizer(2, 2, 9, 25);// ardmn
-	wxFlexGridSizer *fgsSingUp = new wxFlexGridSizer(1, 1, 9, 0);// ardmn
+	wxFlexGridSizer *fgs = new wxFlexGridSizer(2, 2, 9, 25);
+	wxFlexGridSizer *fgsSingUp = new wxFlexGridSizer(1, 1, 9, 0);
 	
 	wxBoxSizer *verticalBox = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer *buttonsHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
@@ -1277,31 +1277,30 @@ CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
 	Connect(wxID_EXIT, wxEVT_COMMAND_BUTTON_CLICKED, 
 		wxCommandEventHandler(CustomDialog::onQuit));
 	
-	wxColour blue(wxT("#2A2AF7"));// ardmn
-	wxColour backColour(wxT("#FFFFFF")); // ardmn
-	//wxLaunchDefaultBrowser( _T("google.ru") );// ardmn
-	wxHyperlinkCtrl *singUpButton = new wxHyperlinkCtrl(this, -1, wxT("Click to Sing up"),wxT("http://www.goodanchorage.com/user/register"), // ardmn
-	wxDefaultPosition,wxSize(230, 20) );// ardmn
+	wxColour blue(wxT("#2A2AF7"));
+	wxColour backColour(wxT("#FFFFFF")); 
+	wxHyperlinkCtrl *singUpButton = new wxHyperlinkCtrl(this, -1, wxT("Join GoodAnchorage.com"),wxT("http://www.goodanchorage.com/user/register"), 
+	wxDefaultPosition, wxSize(230, 30) );
 	
-	singUpButton->SetForegroundColour( blue );// ardmn
+	singUpButton->SetForegroundColour( blue );
 	
-	fgsSingUp->Add(singUpButton);// ardmn
+	fgsSingUp->Add(singUpButton);
 	 
-	fgs->Add(loginTitle);// ardmn
-	fgs->Add(loginTextCtrl, 1, wxEXPAND);// ardmn
-	fgs->Add(passwordTitle);// ardmn
-	fgs->Add(passwordTextCtrl, 1, wxEXPAND);// ardmn
-	fgs->AddGrowableRow(2, 1);// ardmn
-	fgs->AddGrowableCol(1, 1);// ardmn
+	fgs->Add(loginTitle);
+	fgs->Add(loginTextCtrl, 1, wxEXPAND);
+	fgs->Add(passwordTitle);
+	fgs->Add(passwordTextCtrl, 1, wxEXPAND);
+	fgs->AddGrowableRow(2, 1);
+	fgs->AddGrowableCol(1, 1);
 	
 	buttonsHorithontalBox->Add(okButton, 1);
 	buttonsHorithontalBox->Add(closeButton, 1, wxLEFT, 5);
 
-	//verticalBox->Add(loginHorithontalBox, 1);// ardmn
-	//verticalBox->Add(passwordHorithontalBox, 1);// ardmn
-	verticalBox->Add(fgs, 1, wxALL | wxEXPAND, 15);// ardmn
-	verticalBox->Add(fgsSingUp, 0, wxALIGN_CENTER, 0);// ardmn
+	//verticalBox->Add(loginHorithontalBox, 1);
+	//verticalBox->Add(passwordHorithontalBox, 1);
+	verticalBox->Add(fgs, 1, wxALL | wxEXPAND, 15);
 	verticalBox->Add(buttonsHorithontalBox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
+	verticalBox->Add(fgsSingUp, 0, wxALIGN_CENTER, 0);
  
 	SetSizer(verticalBox);
 }
