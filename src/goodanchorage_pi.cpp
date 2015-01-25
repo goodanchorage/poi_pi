@@ -34,7 +34,10 @@
 
 #include "icons.h"
 
-std::vector<MyMarkerType> markersList;
+#include <wx/listimpl.cpp>
+WX_DEFINE_LIST (Plugin_HyperlinkList);
+
+std::vector<GAMarker> markersList;	// TODO: convert to wxlist
 sqlite3 *gaDb;
 wxTextFile *gaAuthFile;
 bool isOnline;
@@ -291,8 +294,6 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		return false;
 
 	// load multiple markers -- coordinates only
-	// TODO: detect map shifts to prevent sending useless requests?
-	//if( event.LeftIsDown() && !event.Dragging() && m_ActiveMarker == NULL )
 	if( event.LeftDClick() && m_ActiveMarker == NULL )
 	{
 		double plat,plon;
@@ -334,7 +335,7 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		// TODO: Crashes somewhere here. Null pointer?
 		// Looks like either m_ActiveMyMarker is not found fast enough or 
 		// network request takes too long to load between the clicks.
-		// Works much better with right-click than double-clik.
+		// Works much better with right-click than double-click.
 		if (m_ActiveMyMarker) {
 			m_ActiveMyMarker->pluginWaypoint->m_MarkDescription = details;
 			UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
@@ -373,7 +374,7 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 		wxHTTP get;
 		get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 		get.SetTimeout(10);
-		while (!get.Connect(_T("goodanchorage.com")))
+		while (!get.Connect(_T("api.goodanchorage.com")))
 			wxSleep(5);
 	 
 		isOnline = wxApp::IsMainLoopRunning(); // should return true
@@ -421,7 +422,7 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 	// or perhaps because of frequency of calls to SetCursorLatLon. In either case,
 	// the active marker takes a while to be found.
 	bool changeMarkerFlag = false;
-	for (std::vector<MyMarkerType>::iterator it = markersList.begin() ; it != markersList.end(); ++it)
+	for (std::vector<GAMarker>::iterator it = markersList.begin() ; it != markersList.end(); ++it)
 	{
 		PlugIn_Waypoint *marker = it->pluginWaypoint;
 		
@@ -430,6 +431,8 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 			//wxMessageBox(wxString::Format(wxT("%f"),marker->m_lat) + _T(" ") +wxString::Format(wxT("%f"),marker->m_lon));
 			wxPoint pl;
             GetCanvasPixLL( &m_vp, &pl, marker->m_lat, marker->m_lon );
+			// TODO: there is likely to be a problem here. Two markers nearby or overlapping
+			// prevent one of them from being selected
             if (pl.x > cur.x - 10 && pl.x < cur.x + 10 && pl.y > cur.y - 10 && pl.y < cur.y + 10)
             {
 				if(m_ActiveMyMarker != NULL)
@@ -544,7 +547,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 	setServerAuthHeaders(get);
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
-	while (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
+	while (!get.Connect(_T("api.goodanchorage.com")))  // only the server, no pages here yet ...
 		wxSleep(5);
 	 
 	wxApp::IsMainLoopRunning(); // should return true
@@ -587,7 +590,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 			double lat_i = lat_lon[0].AsDouble();
 			double lon_i = lat_lon[1].AsDouble();
 
-			MyMarkerType newMarker;
+			GAMarker newMarker;
 			newMarker.serverDeep = is_deep;
 			newMarker.serverId = id;
 			newMarker.serverTitle = root[i][_T("title")].AsString();
@@ -598,10 +601,18 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 			PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( lat_i, lon_i,
                 _T("_img_ga_anchor"), _T("") ,
                     GetNewGUID()  );
-			//bufWayPoint->m_MarkName = newMarker.getMarkerTitle();
+			//bufWayPoint->m_MarkName = newMarker.getMarkerTitle();	// too messy, don't load here
+			if (!newMarker.serverPath.IsNull()) {
+				Plugin_Hyperlink *plink = new Plugin_Hyperlink;
+				plink->DescrText = _T("Satellite & Ground Photos, 72 Hours Forecast, Reviews");
+				plink->Link = _T("http://www.goodanchorage.com") + newMarker.serverPath;
+				plink->Type = wxEmptyString;
+				bufWayPoint->m_HyperlinkList = new Plugin_HyperlinkList;
+				bufWayPoint->m_HyperlinkList->Insert(plink);
+			}
 			bufWayPoint->m_MarkDescription = 
-							wxT("Right click on the marker to load details.\n")
-							wxT("Slow network delays data loading.");
+							wxT("Right click on the marker again to load details.\n")
+							wxT("Slow network may delay data loading.");
 			newMarker.pluginWaypoint = bufWayPoint;
 				
 			markersList.push_back(newMarker);
@@ -631,7 +642,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 }
 
 
-void goodanchorage_pi::_storeMarkerDb(MyMarkerType marker) {
+void goodanchorage_pi::_storeMarkerDb(GAMarker marker) {
 	// insert or update while keeping existing values: json and updated
 	char const *sql = "INSERT OR REPLACE INTO anchor_point (id, lat, lon, is_deep, title, path, json, updated) "
 			"VALUES (?, ?, ?, ?, ?, ?, "
@@ -704,7 +715,7 @@ void goodanchorage_pi::_loadMarkersDb() {
 	}
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-		MyMarkerType newMarker;
+		GAMarker newMarker;
 		newMarker.serverId = sqlite3_column_int(stmt, 0);
 		newMarker.serverLat = sqlite3_column_double(stmt, 1);
 		newMarker.serverLon = sqlite3_column_double(stmt, 2);
@@ -713,14 +724,13 @@ void goodanchorage_pi::_loadMarkersDb() {
 		newMarker.serverPath = wxString(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)), wxConvUTF8);
 		PlugIn_Waypoint *bufWayPoint = new PlugIn_Waypoint( newMarker.serverLat, 
 				newMarker.serverLon, _T("_img_ga_anchor"), _T(""), GetNewGUID()  );
-		// TODO: not linking when compiling???
 		if (!newMarker.serverPath.IsNull()) {
 			Plugin_Hyperlink *plink = new Plugin_Hyperlink;
-			plink->DescrText = wxEmptyString;
-			plink->Link = _T("http://goodanchorage.com") + newMarker.serverPath;
+			plink->DescrText = _T("Satellite & Ground Photos, 72 Hours Forecast, Reviews");
+			plink->Link = _T("http://www.goodanchorage.com") + newMarker.serverPath;
 			plink->Type = wxEmptyString;
-			//bufWayPoint->m_HyperlinkList = new Plugin_HyperlinkList;
-			//bufWayPoint->m_HyperlinkList->Insert(plink);
+			bufWayPoint->m_HyperlinkList = new Plugin_HyperlinkList;
+			bufWayPoint->m_HyperlinkList->Insert(plink);
 		}
 
 		newMarker.pluginWaypoint = bufWayPoint;
@@ -740,7 +750,7 @@ wxString goodanchorage_pi::sendRequestPlus(int id){
 	setServerAuthHeaders(get);
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
-	while (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
+	while (!get.Connect(_T("api.goodanchorage.com")))  // only the server, no pages here yet ...
 		wxSleep(5);
 	 
 	wxApp::IsMainLoopRunning(); // should return true
@@ -1032,7 +1042,7 @@ bool CustomDialog::sendRequestAuth(wxString login, wxString password)
 	wxHTTP http;
     http.SetHeader(_T("Content-type"), _T("application/json")); 
     http.SetPostBuffer(_T("{ \"username\":\"") + login + _T("\",\"password\":\"")+ password +_T("\" }")); 
-    http.Connect(_T("goodanchorage.com"));
+    http.Connect(_T("api.goodanchorage.com"));
     wxInputStream *httpStream = http.GetInputStream(_T("/api/v1/user/login.json"));
 	
 	gaAuthFile->Clear();
@@ -1211,10 +1221,10 @@ void goodanchorage_pi::showMarkerList(void)
 }
 	
 
-MyMarkerType::MyMarkerType(void){}
-MyMarkerType::~MyMarkerType(void){}
+GAMarker::GAMarker(void){}
+GAMarker::~GAMarker(void){}
 
-wxString MyMarkerType::getMarkerTitle(void)
+wxString GAMarker::getMarkerTitle(void)
 {
 	wxString result = this->serverTitle 
 	
@@ -1252,7 +1262,7 @@ CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
   
 	wxBoxSizer *loginHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer *passwordHorithontalBox = new wxBoxSizer(wxHORIZONTAL);
-	//TODO: add Register link to the dialog
+
 	wxStaticText *loginTitle = new wxStaticText(this, -1, wxT("Login:"));
 	wxStaticText *passwordTitle = new wxStaticText(this, -1, wxT("Password:"));
   

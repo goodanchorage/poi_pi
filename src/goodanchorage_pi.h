@@ -26,12 +26,12 @@
 
 
 
-class MyMarkerType
+class GAMarker
 {
 public:
 
-	MyMarkerType(void);
-    ~MyMarkerType(void);
+	GAMarker(void);
+    ~GAMarker(void);
 	
 	PlugIn_Waypoint *pluginWaypoint;
 	
@@ -110,7 +110,7 @@ public:
 	  
 	  bool isPlugInActive;
 	  PlugIn_Waypoint *m_ActiveMarker;
-	  MyMarkerType *m_ActiveMyMarker;
+	  GAMarker *m_ActiveMyMarker;
 	  
 	  bool PointInLLBox( PlugIn_ViewPort *vp, double x, double y );
 	  
@@ -128,7 +128,7 @@ private:
 	bool _initPluginDir(void);
 	bool _initDb(void);
 	bool _initAuthFile(void);
-	void _storeMarkerDb(MyMarkerType);
+	void _storeMarkerDb(GAMarker);
 	void _storeMarkerJsonDb(int, wxString);
 	wxString _parseMarkerJson(wxString);
 	void _loadMarkersDb();
@@ -139,8 +139,6 @@ private:
     #pragma warning(disable : 4190)
 #endif
 extern "C" DECL_EXP  wxString getErrorText(int errorID,int codeID);
-
-
 
 
 #endif
