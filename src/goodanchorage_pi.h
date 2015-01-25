@@ -135,6 +135,9 @@ private:
 	wxString _loadMarkerDetailsDb(int);
 };
 
+#ifdef _MSC_VER
+    #pragma warning(disable : 4190)
+#endif
 extern "C" DECL_EXP  wxString getErrorText(int errorID,int codeID);
 
 
