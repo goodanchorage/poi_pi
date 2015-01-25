@@ -853,8 +853,8 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 		double lon_i = lat_lon[1].AsDouble();
 				
 		forPrint += _T("Anchorage Position: ") 
-					+ wxString::Format(wxT(" %.3f  "),lat_i)
-					+ wxString::Format(wxT(" %.3f"),lon_i)
+					+ wxString::Format(wxT(" %.4f  "),lat_i)
+					+ wxString::Format(wxT(" %.4f"),lon_i)
 					+ _T("\n");
 	}
 			
@@ -874,8 +874,8 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 			double lat_wp_i = wp_lat_lon[i][0].AsDouble();
 			double lon_wp_i = wp_lat_lon[i][0].AsDouble();
 
-			forPrint += wxString::Format(wxT(" %.3f"),lat_wp_i)
-				+ wxString::Format(wxT(" %.3f"),lon_wp_i)
+			forPrint += wxString::Format(wxT(" %.4f"),lat_wp_i)
+				+ wxString::Format(wxT(" %.4f"),lon_wp_i)
 				+ _T(" ; ");
 		}
 				
