@@ -304,7 +304,10 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 		if (isOnline) {
 			if (!sendRequest(plat,plon)) {
 				isOnline = false;
-				wxMessageBox(_T("Switching to OFFLINE mode.\nClick on the map to load locally stored data."));
+				wxString message = _T(
+"Switching to OFFLINE mode.\nDouble-click on the map to load locally stored data\n\
+or click on the toolbar icon to retry server access.");
+				wxMessageBox(message);
 			}
 		} else {
 			_loadMarkersDb();
@@ -374,7 +377,7 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 		wxHTTP get;
 		get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 		get.SetTimeout(10);
-		while (!get.Connect(_T("api.goodanchorage.com")))
+		while (!get.Connect(_T("goodanchorage.com")))
 			wxSleep(5);
 	 
 		isOnline = wxApp::IsMainLoopRunning(); // should return true
@@ -387,6 +390,13 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 			{	
 				gaAuthFile->Close();
 				loginDialog->ShowModal();
+				if (isOnline) {
+					wxString message = _T(
+"Double-click on the map to load local anchorages.\n\
+Right-click on a marker and select Properties to view details.\
+\n\n(Beta version issue: moving the map may be required to see markers)\n");
+					wxMessageBox(message, _T("Welcome Aboard!"), wxOK|wxCENTRE, NULL, wxDefaultCoord, wxDefaultCoord);
+				}
 			}
 		}
 
@@ -547,7 +557,8 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 	setServerAuthHeaders(get);
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
-	while (!get.Connect(_T("api.goodanchorage.com")))  // only the server, no pages here yet ...
+	// TODO: move to "API." domain, but only after Login box works well
+	while (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
 		wxSleep(5);
 	 
 	wxApp::IsMainLoopRunning(); // should return true
@@ -624,15 +635,24 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 	}
 	else
 	{
+		int httpCode = get.GetResponse();
 		wxMessageBox( _T("Unable to connect: ") +
 			getErrorText(get.GetError(),get.GetResponse()) +
 			_T("\n") +
 			wxString::Format(wxT("(Error %d, "),get.GetError())+
-			wxString::Format(wxT("HTTP %d)"),get.GetResponse()));
+			wxString::Format(wxT("HTTP %d)"), httpCode));
 
-		// TODO: catch 401/403, clear auth data nad prompt to login
-		// otherwise, stale auth data sits in the file and prevents access
 		isLoaded = false;
+		// catch 401/403, clear auth data
+		// otherwise, stale auth data sits in the file and prevents access
+		if (httpCode == 401 || httpCode == 403) {
+			
+			if( gaAuthFile->Exists() && gaAuthFile->Open()) {
+				gaAuthFile->Clear();
+				gaAuthFile->Write();
+				gaAuthFile->Close();
+			}
+		}
 	}
 	 
 	wxDELETE(httpStream);
@@ -750,7 +770,7 @@ wxString goodanchorage_pi::sendRequestPlus(int id){
 	setServerAuthHeaders(get);
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
-	while (!get.Connect(_T("api.goodanchorage.com")))  // only the server, no pages here yet ...
+	while (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
 		wxSleep(5);
 	 
 	wxApp::IsMainLoopRunning(); // should return true
@@ -1042,7 +1062,7 @@ bool CustomDialog::sendRequestAuth(wxString login, wxString password)
 	wxHTTP http;
     http.SetHeader(_T("Content-type"), _T("application/json")); 
     http.SetPostBuffer(_T("{ \"username\":\"") + login + _T("\",\"password\":\"")+ password +_T("\" }")); 
-    http.Connect(_T("api.goodanchorage.com"));
+    http.Connect(_T("goodanchorage.com"));
     wxInputStream *httpStream = http.GetInputStream(_T("/api/v1/user/login.json"));
 	
 	gaAuthFile->Clear();
