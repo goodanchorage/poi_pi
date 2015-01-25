@@ -394,7 +394,8 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 					wxString message = _T(
 "Double-click on the map to load local anchorages.\n\
 Right-click on a marker and select Properties to view details.\
-\n\n(Beta version issue: moving the map may be required to see markers)\n");
+\n\nBeta version bug:\n\
+You may need to move the map to see loaded markers.\n");
 					wxMessageBox(message, _T("Welcome Aboard!"), wxOK|wxCENTRE, NULL, wxDefaultCoord, wxDefaultCoord);
 				}
 			}
