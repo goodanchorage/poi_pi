@@ -587,7 +587,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 		httpStream->Read(out_stream);
 
 		wxJSONValue  root;
-		wxJSONReader reader;
+		wxJSONReader reader( wxJSONREADER_TOLERANT | wxJSONREADER_NOUTF8_STREAM );
 
         // now read the JSON text and store it in the 'root' structure
         // check for errors before retreiving values...
@@ -821,7 +821,7 @@ bool goodanchorage_pi::sendRequestPlus(int id, GAMarker *marker, wxString &detai
 wxString goodanchorage_pi::_parseMarkerJson(wxString res, GAMarker *marker) {
 	wxString forPrint;
 	wxJSONValue  root;
-	wxJSONReader reader;
+	wxJSONReader reader( wxJSONREADER_TOLERANT | wxJSONREADER_NOUTF8_STREAM );
 	int id;
 
 	// now read the JSON text and store it in the 'root' structure
