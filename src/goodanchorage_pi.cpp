@@ -92,7 +92,7 @@ int goodanchorage_pi::Init(void)
 	isPlugInActive = false;
 	m_isIconPressed = false;
 	m_ActiveMarker = NULL;
-	m_ActiveMyMarker = NULL;
+	m_ActiveGAMarker = NULL;
 	// Get a pointer to the opencpn display canvas
     m_parent_window = GetOCPNCanvasWindow();
 	initLoginDialog(m_parent_window);
@@ -322,26 +322,36 @@ or click on the toolbar icon to retry server access.");
 	{
 		wxBeginBusyCursor();
 		wxString details;
+		GAMarker marker;
 		if (isOnline) {
-			details = sendRequestPlus(m_ActiveMyMarker->serverId);
-			if (details.IsNull()) {
+			if (!sendRequestPlus(m_ActiveGAMarker->serverId, &marker, details)) {
 				details = wxEmptyString;
 				isOnline = false;
 				wxMessageBox(_T("Switching to OFFLINE mode."));
 			}
 		} else {
-			details = _loadMarkerDetailsDb(m_ActiveMyMarker->serverId);
-			if (details.IsNull()) {
-				details = _T("No locally stored data available for this anchorage.");
-			}
+			_loadMarkerDetailsDb(m_ActiveGAMarker->serverId, &marker, details);
+			if (details.IsNull()) details = _T("There are no locally stored details for this anchorage.");
 		}
 		// TODO: Crashes somewhere here. Null pointer?
-		// Looks like either m_ActiveMyMarker is not found fast enough or 
+		// Looks like either m_ActiveGAMarker is not found fast enough or 
 		// network request takes too long to load between the clicks.
 		// Works much better with right-click than double-click.
-		if (m_ActiveMyMarker) {
-			m_ActiveMyMarker->pluginWaypoint->m_MarkDescription = details;
-			UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
+		if (m_ActiveGAMarker) {
+			// loaded marker from JSON? Update the map instance
+			if (m_ActiveGAMarker->serverId == marker.serverId) {
+				m_ActiveGAMarker->serverLat = marker.serverLat;
+				m_ActiveGAMarker->serverLon = marker.serverLon;
+				m_ActiveGAMarker->serverDeep = marker.serverDeep;
+				m_ActiveGAMarker->serverTitle = marker.serverTitle;
+				m_ActiveGAMarker->serverPath = marker.serverPath;
+				m_ActiveGAMarker->pluginWaypoint->m_lat = marker.serverLat;
+				m_ActiveGAMarker->pluginWaypoint->m_lon = marker.serverLon;
+				m_ActiveGAMarker->pluginWaypoint->m_MarkName = m_ActiveGAMarker->getMarkerTitle();
+			}
+			
+			m_ActiveGAMarker->pluginWaypoint->m_MarkDescription = details;
+			UpdateSingleWaypoint(m_ActiveGAMarker->pluginWaypoint);
 		}
 		wxEndBusyCursor();
 			
@@ -390,7 +400,7 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 			{	
 				gaAuthFile->Close();
 				loginDialog->ShowModal();
-				if (isOnline) {
+				if (isOnline) { // TODO: not enough -- clicking Cancel produces welcome msg
 					wxString message = _T(
 "Double-click on the map to load local anchorages.\n\
 Right-click on a marker and select Properties to view details.\
@@ -446,34 +456,34 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 			// prevent one of them from being selected
             if (pl.x > cur.x - 10 && pl.x < cur.x + 10 && pl.y > cur.y - 10 && pl.y < cur.y + 10)
             {
-				if(m_ActiveMyMarker != NULL)
+				if(m_ActiveGAMarker != NULL)
 				{
-					m_ActiveMyMarker->pluginWaypoint->m_MarkName = _T("");
-					UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
+					m_ActiveGAMarker->pluginWaypoint->m_MarkName = _T("");
+					UpdateSingleWaypoint(m_ActiveGAMarker->pluginWaypoint);
 				}
 				
-                m_ActiveMarker = marker;
-				m_ActiveMyMarker = &(*it);
-                changeMarkerFlag = true;
+				m_ActiveMarker = marker;
+				m_ActiveGAMarker = &(*it);
+				changeMarkerFlag = true;
 				
-				m_ActiveMyMarker->pluginWaypoint->m_MarkName = m_ActiveMyMarker->getMarkerTitle();
-				UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
+				m_ActiveGAMarker->pluginWaypoint->m_MarkName = m_ActiveGAMarker->getMarkerTitle();
+				UpdateSingleWaypoint(m_ActiveGAMarker->pluginWaypoint);
 				
-                break;
+				break;
             }
 		}
 	}
 	
 	if(	!changeMarkerFlag	)
 	{
-		if(m_ActiveMyMarker != NULL)
+		if(m_ActiveGAMarker != NULL)
 		{
-			m_ActiveMyMarker->pluginWaypoint->m_MarkName = _T("");
-			UpdateSingleWaypoint(m_ActiveMyMarker->pluginWaypoint);
+			m_ActiveGAMarker->pluginWaypoint->m_MarkName = _T("");
+			UpdateSingleWaypoint(m_ActiveGAMarker->pluginWaypoint);
 		}
 	
 		m_ActiveMarker = NULL;
-		m_ActiveMyMarker = NULL;
+		m_ActiveGAMarker = NULL;
 	}
 }
 
@@ -616,7 +626,7 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 			//bufWayPoint->m_MarkName = newMarker.getMarkerTitle();	// too messy, don't load here
 			if (!newMarker.serverPath.IsNull()) {
 				Plugin_Hyperlink *plink = new Plugin_Hyperlink;
-				plink->DescrText = _T("Satellite & Ground Photos, 72 Hours Forecast, Reviews");
+				plink->DescrText = _T("Satellite and Ground Photos, 72 Hours Forecast, Reviews");
 				plink->Link = _T("http://www.goodanchorage.com") + newMarker.serverPath;
 				plink->Type = wxEmptyString;
 				bufWayPoint->m_HyperlinkList = new Plugin_HyperlinkList;
@@ -747,7 +757,7 @@ void goodanchorage_pi::_loadMarkersDb() {
 				newMarker.serverLon, _T("_img_ga_anchor"), _T(""), GetNewGUID()  );
 		if (!newMarker.serverPath.IsNull()) {
 			Plugin_Hyperlink *plink = new Plugin_Hyperlink;
-			plink->DescrText = _T("Satellite & Ground Photos, 72 Hours Forecast, Reviews");
+			plink->DescrText = _T("Satellite and Ground Photos, 72 Hours Forecast, Reviews");
 			plink->Link = _T("http://www.goodanchorage.com") + newMarker.serverPath;
 			plink->Type = wxEmptyString;
 			bufWayPoint->m_HyperlinkList = new Plugin_HyperlinkList;
@@ -763,8 +773,8 @@ void goodanchorage_pi::_loadMarkersDb() {
 }
 
 
-wxString goodanchorage_pi::sendRequestPlus(int id){
-	wxString details;
+bool goodanchorage_pi::sendRequestPlus(int id, GAMarker *marker, wxString &details) {
+	bool isLoaded = false;
 	wxHTTP get;
 	get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
 	get.SetTimeout(10); // 10 seconds of timeout instead of 10 minutes ...
@@ -788,9 +798,9 @@ wxString goodanchorage_pi::sendRequestPlus(int id){
 		wxStringOutputStream out_stream(&json);
 		httpStream->Read(out_stream);
 
-		details = _parseMarkerJson(json);
+		details = _parseMarkerJson(json, marker);
 		_storeMarkerJsonDb(id, json);
-		//wxMessageBox(details);
+		isLoaded = true;
 	}
 	else
 	{
@@ -804,11 +814,11 @@ wxString goodanchorage_pi::sendRequestPlus(int id){
 	wxDELETE(httpStream);
 	get.Close();
 
-	return details;
+	return isLoaded;
 }
 
 
-wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
+wxString goodanchorage_pi::_parseMarkerJson(wxString res, GAMarker *marker) {
 	wxString forPrint;
 	wxJSONValue  root;
 	wxJSONReader reader;
@@ -824,12 +834,13 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 			
 	if( root[_T("id")].IsValid() && !root[_T("id")].IsNull() ) {
 		id = root[_T("id")].AsInt();
-		(void)id;
+		marker->serverId = id;
 	}
 				
 	if( root[_T("title")].IsValid() && !root[_T("title")].IsNull() )
 	{
 		wxString title = root[_T("title")].AsString(); //Anchorage Name
+		marker->serverTitle = title;
 		forPrint += _T("Anchorage Name: ") + title + _T("\n");
 	}
 
@@ -837,6 +848,12 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 	{
 		wxString title_alt = root[_T("title_alt")].AsString() ; //Alternative Name
 		forPrint += _T("Alternative Name: ") + title_alt + _T("\n");
+	}
+
+	if( root[_T("claimed")].IsValid() && !root[_T("claimed")].IsNull() )
+	{
+		wxString claimed = root[_T("claimed")].AsString();
+		forPrint += _T("Claimed by: ") + claimed + _T("\n");
 	}
 
 	if( root[_T("lat_lon")].IsValid() && !root[_T("lat_lon")].IsNull() )
@@ -851,9 +868,11 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 
 		double lat_i = lat_lon[0].AsDouble();
 		double lon_i = lat_lon[1].AsDouble();
+		marker->serverLat = lat_i;
+		marker->serverLon = lon_i;
 				
 		forPrint += _T("Anchorage Position: ") 
-					+ wxString::Format(wxT(" %.5f  "),lat_i)
+					+ wxString::Format(wxT(" %.5f "),lat_i)
 					+ wxString::Format(wxT(" %.5f"),lon_i)
 					+ _T("\n");
 	}
@@ -874,11 +893,11 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 			double lat_wp_i = wp_lat_lon[i][0].AsDouble();
 			double lon_wp_i = wp_lat_lon[i][0].AsDouble();
 
-			forPrint += wxString::Format(wxT(" %.5f"),lat_wp_i)
+			forPrint += wxString::Format(wxT(" %.5f "),lat_wp_i)
 				+ wxString::Format(wxT(" %.5f"),lon_wp_i)
 				+ _T("; ");
 		}
-		if (wp_lat_lon.Size() > 0) forPrint.RemoveLast(2);
+		if (wp_lat_lon.Size() > 0) forPrint.RemoveLast(2);	// chop the tail
 				
 		forPrint += _T("\n"); 
 	}
@@ -892,7 +911,6 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 		} else {
 			depth_m = depth_m_val.AsInt();
 		}
-				
 
 		forPrint += _T("Depth (m): ") 
 			+ wxString::Format(wxT(" %.1f"),depth_m)
@@ -913,11 +931,10 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 			+ wxString::Format(wxT(" %.0f"),depth_ft)
 			+ _T("\n");
 	}
-
 				
 	if( root[_T("is_deep")].IsValid() && !root[_T("is_deep")].IsNull() ) {
 		bool is_deep = root[_T("is_deep")].AsBool() ; //Don't show
-		(void)is_deep;
+		marker->serverDeep = is_deep;
 	}
 
 	if( root[_T("bottom")].IsValid() && !root[_T("bottom")].IsNull() )
@@ -1035,6 +1052,11 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res) {
 		forPrint += _T("Comments: ") 
 			+ comments
 			+ _T("\n");
+	}
+
+	if( root[_T("path")].IsValid() && !root[_T("path")].IsNull() )
+	{
+		marker->serverPath = root[_T("path")].AsString();
 	}
 	//wxMessageBox(forPrint);
 
@@ -1187,8 +1209,8 @@ void goodanchorage_pi::_storeMarkerJsonDb(int id, wxString json) {
 }
 
 
-wxString goodanchorage_pi::_loadMarkerDetailsDb(int id) {
-	wxString json, details;
+bool goodanchorage_pi::_loadMarkerDetailsDb(int id, GAMarker *marker, wxString &details) {
+	wxString json;
 	int updated;	// TODO: convert to UTC date and add to the extracted marker data
 	char const *sql = "SELECT json, updated FROM anchor_point WHERE id = ?;";
 	sqlite3_stmt *stmt;
@@ -1196,32 +1218,31 @@ wxString goodanchorage_pi::_loadMarkerDetailsDb(int id) {
 	if( rc != SQLITE_OK ){
       wxMessageBox(wxString::Format(wxT("Failed to fetch Anchorage details: %s"), sqlite3_errmsg(gaDb)));
 	  sqlite3_finalize(stmt);
-	  return wxEmptyString;
+	  return false;
 	}
 
 	if (sqlite3_bind_int(stmt, 1, id) != SQLITE_OK) {
 		wxMessageBox(_T("Failed to bind ID while loading locally stored anchorage"));
 		sqlite3_finalize(stmt);
-		return wxEmptyString;
+		return false;
 	}
 
     if (sqlite3_step(stmt) == SQLITE_ROW) {
 		json = wxString::FromUTF8(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
-		if (!json.IsNull()) details = _parseMarkerJson(json);
-		else details = _T("No details found in local storage for this anchorage.");
+		if (!json.IsNull()) details = _parseMarkerJson(json, marker);
 		updated = sqlite3_column_int(stmt, 0);
-		(void)updated;
+		(void)updated;	// TODO: expire stale data
     }
 	sqlite3_finalize(stmt);
 
-	return details;
+	return true;
 }
 
 
 void goodanchorage_pi::cleanMarkerList(void)
 {
 	m_ActiveMarker = NULL;
-	m_ActiveMyMarker = NULL;
+	m_ActiveGAMarker = NULL;
 
 	for(unsigned int i = 0; i < markersList.size(); i++)
 	{
@@ -1249,9 +1270,8 @@ GAMarker::~GAMarker(void){}
 wxString GAMarker::getMarkerTitle(void)
 {
 	wxString result = this->serverTitle 
-	
-	+wxString::Format(wxT(" (%.3f"),this->serverLat)
-	+wxString::Format(wxT(", %.3f / "),this->serverLon) ;
+		+ wxString::Format(wxT(" (%.3f"),this->serverLat)
+		+ wxString::Format(wxT(", %.3f / "),this->serverLon) ;
 	
 	if(this->serverDeep)
 	{

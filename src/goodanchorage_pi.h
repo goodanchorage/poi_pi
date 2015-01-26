@@ -104,13 +104,11 @@ public:
 	  PlugIn_ViewPort  m_vp;
 	  
 	  bool sendRequest(double lat,double lon);
-	  wxString sendRequestPlus(int id);
-	  
-	
+	  bool sendRequestPlus(int id, GAMarker *marker, wxString &details);
 	  
 	  bool isPlugInActive;
 	  PlugIn_Waypoint *m_ActiveMarker;
-	  GAMarker *m_ActiveMyMarker;
+	  GAMarker *m_ActiveGAMarker;
 	  
 	  bool PointInLLBox( PlugIn_ViewPort *vp, double x, double y );
 	  
@@ -130,9 +128,9 @@ private:
 	bool _initAuthFile(void);
 	void _storeMarkerDb(GAMarker);
 	void _storeMarkerJsonDb(int, wxString);
-	wxString _parseMarkerJson(wxString);
+	wxString _parseMarkerJson(wxString, GAMarker *);
 	void _loadMarkersDb();
-	wxString _loadMarkerDetailsDb(int);
+	bool _loadMarkerDetailsDb(int, GAMarker *marker, wxString &details);
 };
 
 #ifdef _MSC_VER
