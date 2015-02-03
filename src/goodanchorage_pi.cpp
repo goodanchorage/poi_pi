@@ -1254,8 +1254,6 @@ void goodanchorage_pi::cleanMarkerList(void)
 
 void goodanchorage_pi::showMarkerList(void)
 {
-	// TODO: when charts are present markers are hidden unless there is a zoom in/out
-	// Need to add a layer?
 	for(unsigned int i = 0; i < markersList.size(); i++)
 	{
 		AddSingleWaypoint(  markersList[i].pluginWaypoint,  true);
