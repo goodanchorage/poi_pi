@@ -314,7 +314,7 @@ or click on the toolbar icon to retry server access.");
 			showMarkerList();
 		}
 		wxEndBusyCursor();
-		
+		RequestRefresh(m_parent_window);	// force newly added markers to show up
 		return true;	// stop propagation of the event -- don't zoom/move the map.
 	}
 	// load marker details before showing the dialog
@@ -403,9 +403,7 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
 				if (isOnline) { // TODO: not enough -- clicking Cancel produces welcome msg
 					wxString message = _T(
 "Double-click on the map to load local anchorages.\n\
-Right-click on a marker and select Properties to view details.\
-\n\nBeta version bug:\n\
-You may need to move the map to see loaded markers.\n");
+Right-click on a marker and select Properties to view details.\n");
 					wxMessageBox(message, _T("Welcome Aboard!"), wxOK|wxCENTRE, NULL, wxDefaultCoord, wxDefaultCoord);
 				}
 			}
@@ -588,9 +586,10 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 
 		wxJSONValue  root;
 		wxJSONReader reader( wxJSONREADER_TOLERANT | wxJSONREADER_NOUTF8_STREAM );
+		// wxJSONREADER_NOUTF8_STREAM tries to fix https://github.com/goodanchorage/goodanchorage_pi/issues/7
 
         // now read the JSON text and store it in the 'root' structure
-        // check for errors before retreiving values...
+        // check for errors before retrieving values...
 		int numErrors = reader.Parse( res, &root );
 		if ( numErrors > 0 || !root.IsArray() )  {
 			wxMessageBox(_T("!root.IsArray() ") + res);
