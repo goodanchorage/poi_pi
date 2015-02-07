@@ -46,24 +46,7 @@ public:
 	wxString getMarkerTitle(void);
 };
 
-const int LOGIN_BUTTON_ID = 101;
-
-class CustomDialog : public wxDialog
-{
-public:
-
-	int              m_leftclick_tool_id;
-	
-	wxTextCtrl *loginTextCtrl;
-	wxTextCtrl *passwordTextCtrl;
-
-	CustomDialog(const wxString& title,wxWindow* parent);
-	void onQuit(wxCommandEvent & event);
-	void onLogin(wxCommandEvent & event);
-	
-	void setM_leftclick_tool_id(int m_leftclick_tool_id);
-	bool sendRequestAuth(wxString login, wxString password);
-};
+class CustomDialog;
 
 class goodanchorage_pi : public opencpn_plugin_112
 {
@@ -106,7 +89,6 @@ public:
 	  bool sendRequest(double lat,double lon);
 	  bool sendRequestPlus(int id, GAMarker *marker, wxString &details);
 	  
-	  bool isPlugInActive;
 	  PlugIn_Waypoint *m_ActiveMarker;
 	  GAMarker *m_ActiveGAMarker;
 	  
@@ -119,8 +101,12 @@ public:
 	void setServerAuthHeaders(wxHTTP &httpObj);
 
 	CustomDialog *loginDialog;
+
+        enum GoodAnchorageState { DISABLED, OFFLINE, BUSY, ONLINE } m_state;
+        void SetState(enum GoodAnchorageState state);
+
 private:
-	bool m_isIconPressed;
+
 	wxString m_PluginDir;
 
 	bool _initPluginDir(void);
@@ -131,6 +117,28 @@ private:
 	wxString _parseMarkerJson(wxString, GAMarker *);
 	void _loadMarkersDb();
 	bool _loadMarkerDetailsDb(int, GAMarker *marker, wxString &details);
+};
+
+const int LOGIN_BUTTON_ID = 101;
+
+class CustomDialog : public wxDialog
+{
+public:
+
+	int              m_leftclick_tool_id;
+	
+	wxTextCtrl *loginTextCtrl;
+	wxTextCtrl *passwordTextCtrl;
+
+	CustomDialog(const wxString& title, goodanchorage_pi &pi, wxWindow* parent);
+	void onQuit(wxCommandEvent & event);
+	void onLogin(wxCommandEvent & event);
+	
+	void setM_leftclick_tool_id(int m_leftclick_tool_id);
+	bool sendRequestAuth(wxString login, wxString password);
+
+private:
+        goodanchorage_pi &m_goodanchorage_pi;
 };
 
 #ifdef _MSC_VER

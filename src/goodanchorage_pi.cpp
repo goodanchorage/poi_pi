@@ -40,7 +40,6 @@ WX_DEFINE_LIST (Plugin_HyperlinkList);
 std::vector<GAMarker> markersList;	// TODO: convert to wxlist
 sqlite3 *gaDb;
 wxTextFile *gaAuthFile;
-bool isOnline;
 
 //---------------------------------------------------------------------------------------------------------
 //
@@ -75,26 +74,29 @@ goodanchorage_pi::goodanchorage_pi(void *ppimgr)
 {
       // Create the PlugIn icons
       initialize_images();
-	  isPlugInActive = false;
 }
 
 
 goodanchorage_pi::~goodanchorage_pi(void)
 {
-	  delete _img_ga_anchor;
-      delete _img_ga_toolbar;
-	  delete _img_ga_toolbar_on;
+    delete _img_ga_anchor;
+    delete _img_ga_disabled;
+    delete _img_ga_offline;
+    delete _img_ga_busy;
+    delete _img_ga_online;
+    delete _img_ga_toolbar_on;
 }
 
 
 int goodanchorage_pi::Init(void)
 {
-	isPlugInActive = false;
-	m_isIconPressed = false;
+        SetState(DISABLED);
 	m_ActiveMarker = NULL;
 	m_ActiveGAMarker = NULL;
-	// Get a pointer to the opencpn display canvas
-    m_parent_window = GetOCPNCanvasWindow();
+
+	// Get a pointer to the opencpn display canvas, to use as a parent for the GoodAnchorage dialog
+        m_parent_window = GetOCPNCanvasWindow();
+
 	initLoginDialog(m_parent_window);
 
 	AddLocaleCatalog( _T("opencpn-goodanchorage_pi") );
@@ -102,24 +104,21 @@ int goodanchorage_pi::Init(void)
 	// Get a pointer to the opencpn configuration object
 	m_pconfig = GetOCPNConfigObject();
 
-	// Get a pointer to the opencpn display canvas, to use as a parent for the GoodAnchorage dialog
-	m_parent_window = GetOCPNCanvasWindow();
-	  
-	AddCustomWaypointIcon(_img_ga_anchor, _T("_img_ga_anchor"), _T("Good Anchorage"));
+	AddCustomWaypointIcon(_img_ga_anchor, _T("_img_ga_anchor"), _("Good Anchorage"));
 
 	// This PlugIn needs a toolbar icon, so request its insertion if enabled locally
-	m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_toolbar, _img_ga_toolbar, wxITEM_CHECK,
+	m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_disabled, _img_ga_disabled, wxITEM_CHECK,
 						_("GoodAnchorage"), _T(""), NULL, GOODANCHORAGE_TOOL_POSITION, 0, this);
 	if (!_initPluginDir()) {
-		wxMessageBox(_T("Error locating plugin data directory.\nGoodAnchorage plugin will not run properly."),
-					_T("GoodAnchorage Plugin"), wxICON_ERROR);
+		wxMessageBox(_("Error locating plugin data directory.\nGoodAnchorage plugin will not run properly."),
+                             _T("GoodAnchorage Plugin"), wxICON_ERROR);
 	} else if (!_initDb()) {
-		wxMessageBox(_T("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
-					_T("GoodAnchorage Plugin"), wxICON_ERROR);
+		wxMessageBox(_("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
+                             _T("GoodAnchorage Plugin"), wxICON_ERROR);
 	}
 	if (!_initAuthFile()) {
-		wxMessageBox(_T("Error creating authentication file.\nGoodAnchorage plugin will not run properly."),
-					_T("GoodAnchorage Plugin"), wxICON_ERROR);
+		wxMessageBox(_("Error creating authentication file.\nGoodAnchorage plugin will not run properly."),
+                             _T("GoodAnchorage Plugin"), wxICON_ERROR);
 	}
 
 	return (WANTS_OVERLAY_CALLBACK |
@@ -143,7 +142,7 @@ bool goodanchorage_pi::_initPluginDir(void) {
 	ga_dir.Append(_T("goodanchorage"));
 	//wxMessageBox(_T("Looking for GA data directory in ") + ga_dir);
 	if (!wxDir::Exists(ga_dir) && !wxFileName::Mkdir(ga_dir, 0755, wxPATH_MKDIR_FULL)) {
-		wxLogMessage(_T("Failed to create GA data directory in ") + ga_dir);
+		wxLogMessage(_("Failed to create GA data directory in ") + ga_dir);
 		return false;
 	}
 
@@ -186,7 +185,7 @@ bool goodanchorage_pi::_initDb(void) {
 					if (errMsg != NULL) {
 						_errMsg = wxString::FromUTF8(errMsg);
 						sqlite3_free(errMsg);
-						wxMessageBox(_T("Failed to create local storage: ") + _errMsg);
+						wxMessageBox(_("Failed to create local storage: ") + _errMsg);
 					}
 					return false;
 				}
@@ -248,7 +247,7 @@ int goodanchorage_pi::GetPlugInVersionMinor()
 
 wxBitmap *goodanchorage_pi::GetPlugInBitmap()
 {
-      return _img_ga_toolbar;
+      return _img_ga_disabled;
 }
 
 
@@ -290,7 +289,7 @@ int goodanchorage_pi::GetToolbarToolCount(void)
 
 bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 {
-	if(!isPlugInActive)
+	if(m_state == DISABLED)
 		return false;
 
 	// load multiple markers -- coordinates only
@@ -298,40 +297,45 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 	{
 		double plat,plon;
 
-		wxBeginBusyCursor();
-        GetCanvasLLPix( &m_vp, event.GetPosition(), &plat, &plon );
+//		wxBeginBusyCursor();
+                GetCanvasLLPix( &m_vp, event.GetPosition(), &plat, &plon );
 		//wxMessageBox( wxString::Format(wxT("%f"),plat) + _T(" ") + wxString::Format(wxT("%f"),plon));
-		if (isOnline) {
+		if (m_state == ONLINE) {
+                    SetState(BUSY);
 			if (!sendRequest(plat,plon)) {
-				isOnline = false;
-				wxString message = _T(
+                                SetState(OFFLINE);
+				wxString message = _(
 "Switching to OFFLINE mode.\nDouble-click on the map to load locally stored data\n\
 or click on the toolbar icon to retry server access.");
 				wxMessageBox(message);
-			}
-		} else {
+			} else
+                            SetState(ONLINE);
+		} else if (m_state == OFFLINE) {
 			_loadMarkersDb();
 			showMarkerList();
 		}
-		wxEndBusyCursor();
+//		wxEndBusyCursor();
 		
 		return true;	// stop propagation of the event -- don't zoom/move the map.
-	}
+        }
+
 	// load marker details before showing the dialog
-	else if (event.RightDown () && m_ActiveMarker != NULL )
+        if (event.RightDown () && m_ActiveMarker != NULL )
 	{
-		wxBeginBusyCursor();
+//		wxBeginBusyCursor();
 		wxString details;
 		GAMarker marker;
-		if (isOnline) {
+		if (m_state == ONLINE) {
+                    SetState(BUSY);
 			if (!sendRequestPlus(m_ActiveGAMarker->serverId, &marker, details)) {
 				details = wxEmptyString;
-				isOnline = false;
-				wxMessageBox(_T("Switching to OFFLINE mode."));
-			}
-		} else {
+                                SetState(OFFLINE);
+				wxMessageBox(_("Switching to OFFLINE mode."));
+			} else
+                            SetState(ONLINE);
+		} else if (m_state == OFFLINE) {
 			_loadMarkerDetailsDb(m_ActiveGAMarker->serverId, &marker, details);
-			if (details.IsNull()) details = _T("There are no locally stored details for this anchorage.");
+			if (details.IsNull()) details = _("There are no locally stored details for this anchorage.");
 		}
 		// TODO: Crashes somewhere here. Null pointer?
 		// Looks like either m_ActiveGAMarker is not found fast enough or 
@@ -353,12 +357,11 @@ or click on the toolbar icon to retry server access.");
 			m_ActiveGAMarker->pluginWaypoint->m_MarkDescription = details;
 			UpdateSingleWaypoint(m_ActiveGAMarker->pluginWaypoint);
 		}
-		wxEndBusyCursor();
+//		wxEndBusyCursor();
 			
-		return false;	// allow event propagation -- we want to see marker dialog
 	}
-	else
-		return false;
+
+        return false;	// allow event propagation -- we want to see marker dialog
 }
 
 
@@ -367,52 +370,42 @@ void goodanchorage_pi::ShowPreferencesDialog( wxWindow* parent )
     
 }
 
-
 void goodanchorage_pi::OnToolbarToolCallback(int id)
 {
-	// a hack to overcome unappealing icon shifting done by OCPN by default
-	m_isIconPressed = !m_isIconPressed;
-	wxBitmap *toolbar_icon = m_isIconPressed ?  _img_ga_toolbar_on : _img_ga_toolbar;
-	SetToolbarToolBitmaps(m_leftclick_tool_id, toolbar_icon, toolbar_icon);
+    if(m_state != DISABLED) {
+        SetState(DISABLED);
+        cleanMarkerList();
+        return;
+    }
 
-	if(isPlugInActive)
-	{
-		cleanMarkerList();
-		isPlugInActive = false;
-		return;
-	}
-	else
-	{
-		// check network first
-		wxHTTP get;
-		get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
-		get.SetTimeout(10);
-		while (!get.Connect(_T("goodanchorage.com")))
-			wxSleep(5);
+// check network first
+    wxHTTP get;
+    get.SetHeader(_T("Content-type"), _T("text/html; charset=utf-8"));
+    get.SetTimeout(10);
+    if (!get.Connect(_T("goodanchorage.com"))) {
+        SetState(OFFLINE);
+        wxMessageBox(_("No network detected, switching to OFFLINE mode."));
+    } else {
 	 
-		isOnline = wxApp::IsMainLoopRunning(); // should return true
-		get.Close();
+        SetState(ONLINE);
+        get.Close();
 
-		if (isOnline && gaAuthFile) {
-			// login box if no auth info in the auth file
-			gaAuthFile->Open();
-			if( gaAuthFile->Eof() )
-			{	
-				gaAuthFile->Close();
-				loginDialog->ShowModal();
-				if (isOnline) { // TODO: not enough -- clicking Cancel produces welcome msg
-					wxString message = _T(
-"Double-click on the map to load local anchorages.\n\
+        if (m_state == ONLINE && gaAuthFile) {
+            // login box if no auth info in the auth file
+            gaAuthFile->Open();
+            if( gaAuthFile->Eof() )
+            {	
+                gaAuthFile->Close();
+                loginDialog->ShowModal();
+                wxString message = _(
+                    "Double-click on the map to load local anchorages.\n\
 Right-click on a marker and select Properties to view details.\
 \n\nBeta version bug:\n\
 You may need to move the map to see loaded markers.\n");
-					wxMessageBox(message, _T("Welcome Aboard!"), wxOK|wxCENTRE, NULL, wxDefaultCoord, wxDefaultCoord);
-				}
-			}
-		}
-
-		isPlugInActive = true;
-	}
+                wxMessageBox(message, _T("Welcome Aboard!"), wxOK|wxCENTRE, NULL, wxDefaultCoord, wxDefaultCoord);
+            }
+        }
+    }
 	
     RequestRefresh(m_parent_window); // refresh main window
 }
@@ -434,10 +427,10 @@ bool goodanchorage_pi::RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *v
 
 void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 {
-	if(!isPlugInActive) return;
+	if(m_state == DISABLED) return;
 	
 	wxPoint cur;
-    GetCanvasPixLL( &m_vp, &cur, lat, lon );
+        GetCanvasPixLL( &m_vp, &cur, lat, lon );
 
 	// TODO: review -- this may not be fast enough. Maybe because of the loop,
 	// or perhaps because of frequency of calls to SetCursorLatLon. In either case,
@@ -557,7 +550,8 @@ void goodanchorage_pi::SendTimelineMessage(wxDateTime time)
 }
 
 
-bool goodanchorage_pi::sendRequest(double lat,double lon){
+bool goodanchorage_pi::sendRequest(double lat, double lon)
+{
 	bool isLoaded;
 
 	cleanMarkerList();
@@ -569,10 +563,8 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
 	// TODO: move to "API." domain, but only after Login box works well
-	while (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
-		wxSleep(5);
-	 
-	wxApp::IsMainLoopRunning(); // should return true
+	if (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
+            return false;
 	 
 	 //goodanchorage.com/api/v1/anchor_list/
 	// use _T("/") for index.html, index.php, default.asp, etc.
@@ -593,8 +585,8 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
         // check for errors before retreiving values...
 		int numErrors = reader.Parse( res, &root );
 		if ( numErrors > 0 || !root.IsArray() )  {
-			wxMessageBox(_T("!root.IsArray() ") + res);
-			return false;
+                    wxMessageBox(_("Data from server incomprehensible, check internet connection."));
+                    return false;
 		}
 
 		for ( int i = 0; i < root.Size(); i++ )  {
@@ -673,7 +665,8 @@ bool goodanchorage_pi::sendRequest(double lat,double lon){
 }
 
 
-void goodanchorage_pi::_storeMarkerDb(GAMarker marker) {
+void goodanchorage_pi::_storeMarkerDb(GAMarker marker)
+{
 	// insert or update while keeping existing values: json and updated
 	char const *sql = "INSERT OR REPLACE INTO anchor_point (id, lat, lon, is_deep, title, path, json, updated) "
 			"VALUES (?, ?, ?, ?, ?, ?, "
@@ -1078,6 +1071,29 @@ void goodanchorage_pi::setServerAuthHeaders(wxHTTP &httpObj)
 	httpObj.SetHeader(_T("X-CSRF-Token"),  token );
 }
 
+void goodanchorage_pi::SetState(enum GoodAnchorageState state)
+{
+    m_state = state;
+
+	// a hack to overcome unappealing icon shifting done by OCPN by default
+    wxBitmap *toolbar_icon;
+    switch(m_state) {
+    default:
+        toolbar_icon = _img_ga_disabled;
+        break;
+    case OFFLINE:
+        toolbar_icon = _img_ga_offline;
+        break;
+    case BUSY:
+        toolbar_icon = _img_ga_busy;
+        break;
+    case ONLINE:
+        toolbar_icon = _img_ga_online;
+        break;
+    }
+
+    SetToolbarToolBitmaps(m_leftclick_tool_id, toolbar_icon, toolbar_icon);
+}
 
 bool CustomDialog::sendRequestAuth(wxString login, wxString password)
 {
@@ -1137,7 +1153,7 @@ bool CustomDialog::sendRequestAuth(wxString login, wxString password)
 			_T("\n") +
 			wxString::Format(wxT("(Error %d, "),http.GetError())+
 			wxString::Format(wxT("HTTP %d)"),http.GetResponse()));
-		isOnline = false;
+                return false;
     }
 
 	gaAuthFile->Write();
@@ -1288,12 +1304,13 @@ wxString GAMarker::getMarkerTitle(void)
 void goodanchorage_pi::initLoginDialog(wxWindow* parent)
 {
 
-	loginDialog = new CustomDialog(wxT("GoodAnchorage Access"),parent);	
+    loginDialog = new CustomDialog(wxT("GoodAnchorage Access"), *this, parent);
 }
 
 
-CustomDialog::CustomDialog(const wxString & title,wxWindow* parent)
-       : wxDialog(parent, -1, title, wxDefaultPosition, wxSize(280, 200))
+CustomDialog::CustomDialog(const wxString & title, goodanchorage_pi &pi, wxWindow* parent)
+    : wxDialog(parent, -1, title, wxDefaultPosition, wxSize(280, 200)),
+      m_goodanchorage_pi(pi)
 {
 	
 	wxFlexGridSizer *fgs = new wxFlexGridSizer(2, 2, 9, 25);
@@ -1372,8 +1389,9 @@ void CustomDialog::onLogin(wxCommandEvent & WXUNUSED(event))
 	wxString password = passwordTextCtrl->GetValue();
 	wxBeginBusyCursor();
 	if (!sendRequestAuth(login,password)) {
-		// TODO: show login box again
+                // TODO: show login box again
 		// If canceled -- switch to offline
+            m_goodanchorage_pi.SetState(goodanchorage_pi::OFFLINE);
 	}
 	wxEndBusyCursor();
     Close(true);
