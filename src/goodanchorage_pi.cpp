@@ -1,3 +1,26 @@
+/***************************************************************************
+ *
+ * Project:  OpenCPN
+ * Purpose:  GoodAnchorage PlugIn
+ *
+ ***************************************************************************
+ *   Copyright (C) 2015 by GoodAnchorage.com                               *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
+ **************************************************************************/
 
 #include "wx/wxprec.h"
 
@@ -314,8 +337,12 @@ or click on the toolbar icon to retry server access.");
 			_loadMarkersDb();
 			showMarkerList();
 		}
+
 //		wxEndBusyCursor();
 		
+		wxEndBusyCursor();
+		RequestRefresh(m_parent_window);	// force newly added markers to show up
+
 		return true;	// stop propagation of the event -- don't zoom/move the map.
         }
 
@@ -399,9 +426,7 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
                 loginDialog->ShowModal();
                 wxString message = _(
                     "Double-click on the map to load local anchorages.\n\
-Right-click on a marker and select Properties to view details.\
-\n\nBeta version bug:\n\
-You may need to move the map to see loaded markers.\n");
+Right-click on a marker and select Properties to view details.\n");
                 wxMessageBox(message, _T("Welcome Aboard!"), wxOK|wxCENTRE, NULL, wxDefaultCoord, wxDefaultCoord);
             }
         }
@@ -580,9 +605,10 @@ bool goodanchorage_pi::sendRequest(double lat, double lon)
 
 		wxJSONValue  root;
 		wxJSONReader reader( wxJSONREADER_TOLERANT | wxJSONREADER_NOUTF8_STREAM );
+		// wxJSONREADER_NOUTF8_STREAM tries to fix https://github.com/goodanchorage/goodanchorage_pi/issues/7
 
         // now read the JSON text and store it in the 'root' structure
-        // check for errors before retreiving values...
+        // check for errors before retrieving values...
 		int numErrors = reader.Parse( res, &root );
 		if ( numErrors > 0 || !root.IsArray() )  {
                     wxMessageBox(_("Data from server incomprehensible, check internet connection."));
@@ -1271,8 +1297,6 @@ void goodanchorage_pi::cleanMarkerList(void)
 
 void goodanchorage_pi::showMarkerList(void)
 {
-	// TODO: when charts are present markers are hidden unless there is a zoom in/out
-	// Need to add a layer?
 	for(unsigned int i = 0; i < markersList.size(); i++)
 	{
 		AddSingleWaypoint(  markersList[i].pluginWaypoint,  true);
