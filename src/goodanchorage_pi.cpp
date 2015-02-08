@@ -800,10 +800,8 @@ bool goodanchorage_pi::sendRequestPlus(int id, GAMarker *marker, wxString &detai
 	setServerAuthHeaders(get);
 	 
 	// this will wait until the user connects to the internet. It is important in case of dialup (or ADSL) connections
-	while (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
-		wxSleep(5);
-	 
-	wxApp::IsMainLoopRunning(); // should return true
+	if (!get.Connect(_T("goodanchorage.com")))  // only the server, no pages here yet ...
+            return false;
 	 
 	//goodanchorage.com/api/v1/anchor_list/
 	// use _T("/") for index.html, index.php, default.asp, etc.
