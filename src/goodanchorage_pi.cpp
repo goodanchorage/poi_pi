@@ -338,7 +338,7 @@ or click on the toolbar icon to retry server access.");
 			showMarkerList();
 		}
 
-		wxEndBusyCursor();
+//		wxEndBusyCursor();
 		RequestRefresh(m_parent_window);	// force newly added markers to show up
 
 		return true;	// stop propagation of the event -- don't zoom/move the map.
@@ -846,7 +846,8 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res, GAMarker *marker) {
 	// check for errors before retreiving values...
 	int numErrors = reader.Parse( res, &root );
 	if ( numErrors > 0  )  {
-                gaMessageBox(_T("!root.IsArray() ") + res, wxICON_ERROR);
+                gaMessageBox(_("Anchor data from server incomprehensible") +
+                             wxString(_T(":\n")) + res, wxICON_ERROR);
 		return wxEmptyString;
 	}
 			
