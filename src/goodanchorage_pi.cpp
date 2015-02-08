@@ -60,6 +60,8 @@
 #include <wx/listimpl.cpp>
 WX_DEFINE_LIST (Plugin_HyperlinkList);
 
+#define gaMessageBox(STR, ...) wxMessageBox(STR, _T("GoodAnchorage Plugin"), __VA_ARGS__)
+
 std::vector<GAMarker> markersList;	// TODO: convert to wxlist
 sqlite3 *gaDb;
 wxTextFile *gaAuthFile;
@@ -82,8 +84,6 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) {
     delete p;
 }
 
-
-wxWindow        *m_parent_window;
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -133,15 +133,15 @@ int goodanchorage_pi::Init(void)
 	m_leftclick_tool_id = InsertPlugInTool(_T(""), _img_ga_disabled, _img_ga_disabled, wxITEM_CHECK,
 						_("GoodAnchorage"), _T(""), NULL, GOODANCHORAGE_TOOL_POSITION, 0, this);
 	if (!_initPluginDir()) {
-		wxMessageBox(_("Error locating plugin data directory.\nGoodAnchorage plugin will not run properly."),
-                             _T("GoodAnchorage Plugin"), wxICON_ERROR);
+            gaMessageBox(_("Error locating plugin data directory.\nGoodAnchorage plugin will not run properly."),
+                         wxICON_ERROR);
 	} else if (!_initDb()) {
-		wxMessageBox(_("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
-                             _T("GoodAnchorage Plugin"), wxICON_ERROR);
+		gaMessageBox(_("Error opening local data store.\nGoodAnchorage plugin will run in ONLINE mode only."),
+                             wxICON_ERROR);
 	}
 	if (!_initAuthFile()) {
-		wxMessageBox(_("Error creating authentication file.\nGoodAnchorage plugin will not run properly."),
-                             _T("GoodAnchorage Plugin"), wxICON_ERROR);
+		gaMessageBox(_("Error creating authentication file.\nGoodAnchorage plugin will not run properly."),
+                             wxICON_ERROR);
 	}
 
 	return (WANTS_OVERLAY_CALLBACK |
@@ -163,7 +163,7 @@ bool goodanchorage_pi::_initPluginDir(void) {
 	ga_dir.Append(_T("plugins"));
 	ga_dir.Append(wxFileName::GetPathSeparator());
 	ga_dir.Append(_T("goodanchorage"));
-	//wxMessageBox(_T("Looking for GA data directory in ") + ga_dir);
+	//gaMessageBox(_T("Looking for GA data directory in ") + ga_dir);
 	if (!wxDir::Exists(ga_dir) && !wxFileName::Mkdir(ga_dir, 0755, wxPATH_MKDIR_FULL)) {
 		wxLogMessage(_("Failed to create GA data directory in ") + ga_dir);
 		return false;
@@ -208,7 +208,7 @@ bool goodanchorage_pi::_initDb(void) {
 					if (errMsg != NULL) {
 						_errMsg = wxString::FromUTF8(errMsg);
 						sqlite3_free(errMsg);
-						wxMessageBox(_("Failed to create local storage: ") + _errMsg);
+						gaMessageBox(_("Failed to create local storage: ") + _errMsg, wxICON_ERROR);
 					}
 					return false;
 				}
@@ -322,7 +322,7 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 
 //		wxBeginBusyCursor();
                 GetCanvasLLPix( &m_vp, event.GetPosition(), &plat, &plon );
-		//wxMessageBox( wxString::Format(wxT("%f"),plat) + _T(" ") + wxString::Format(wxT("%f"),plon));
+		//gaMessageBox( wxString::Format(wxT("%f"),plat) + _T(" ") + wxString::Format(wxT("%f"),plon));
 		if (m_state == ONLINE) {
                     SetState(BUSY);
 			if (!sendRequest(plat,plon)) {
@@ -330,7 +330,7 @@ bool goodanchorage_pi::MouseEventHook( wxMouseEvent &event )
 				wxString message = _(
 "Switching to OFFLINE mode.\nDouble-click on the map to load locally stored data\n\
 or click on the toolbar icon to retry server access.");
-				wxMessageBox(message);
+				gaMessageBox(message, wxOK);
 			} else
                             SetState(ONLINE);
 		} else if (m_state == OFFLINE) {
@@ -338,8 +338,6 @@ or click on the toolbar icon to retry server access.");
 			showMarkerList();
 		}
 
-//		wxEndBusyCursor();
-		
 		wxEndBusyCursor();
 		RequestRefresh(m_parent_window);	// force newly added markers to show up
 
@@ -357,7 +355,7 @@ or click on the toolbar icon to retry server access.");
 			if (!sendRequestPlus(m_ActiveGAMarker->serverId, &marker, details)) {
 				details = wxEmptyString;
                                 SetState(OFFLINE);
-				wxMessageBox(_("Switching to OFFLINE mode."));
+				gaMessageBox(_("Switching to OFFLINE mode."), wxOK);
 			} else
                             SetState(ONLINE);
 		} else if (m_state == OFFLINE) {
@@ -402,6 +400,7 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
     if(m_state != DISABLED) {
         SetState(DISABLED);
         cleanMarkerList();
+        RequestRefresh(m_parent_window);	// force markers to disappear
         return;
     }
 
@@ -411,7 +410,7 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
     get.SetTimeout(10);
     if (!get.Connect(_T("goodanchorage.com"))) {
         SetState(OFFLINE);
-        wxMessageBox(_("No network detected, switching to OFFLINE mode."));
+        gaMessageBox(_("No network detected, switching to OFFLINE mode."), wxOK);
     } else {
 	 
         SetState(ONLINE);
@@ -424,10 +423,10 @@ void goodanchorage_pi::OnToolbarToolCallback(int id)
             {	
                 gaAuthFile->Close();
                 loginDialog->ShowModal();
-                wxString message = _(
-                    "Double-click on the map to load local anchorages.\n\
+                wxString message = _("Welcome Aboard!\n\n\
+Double-click on the map to load local anchorages.\n\
 Right-click on a marker and select Properties to view details.\n");
-                wxMessageBox(message, _T("Welcome Aboard!"), wxOK|wxCENTRE, NULL, wxDefaultCoord, wxDefaultCoord);
+                gaMessageBox(message, wxCENTRE);
             }
         }
     }
@@ -467,7 +466,7 @@ void goodanchorage_pi::SetCursorLatLon(double lat, double lon)
 		
 		if(  PointInLLBox( &m_vp,  marker->m_lon, marker->m_lat ) ) // !!!!!!!!!!!!!!! x == lon  and y = lat !!!!!!!!
 		{
-			//wxMessageBox(wxString::Format(wxT("%f"),marker->m_lat) + _T(" ") +wxString::Format(wxT("%f"),marker->m_lon));
+			//gaMessageBox(wxString::Format(wxT("%f"),marker->m_lat) + _T(" ") +wxString::Format(wxT("%f"),marker->m_lon));
 			wxPoint pl;
             GetCanvasPixLL( &m_vp, &pl, marker->m_lat, marker->m_lon );
 			// TODO: there is likely to be a problem here. Two markers nearby or overlapping
@@ -611,14 +610,14 @@ bool goodanchorage_pi::sendRequest(double lat, double lon)
         // check for errors before retrieving values...
 		int numErrors = reader.Parse( res, &root );
 		if ( numErrors > 0 || !root.IsArray() )  {
-                    wxMessageBox(_("Data from server incomprehensible, check internet connection."));
+                    gaMessageBox(_("Data from server incomprehensible, check internet connection."), wxICON_ERROR);
                     return false;
 		}
 
 		for ( int i = 0; i < root.Size(); i++ )  {
 			wxJSONValue lat_lon = root[i][_T("lat_lon")];	 
 			if ( !lat_lon.IsArray() ) {
-				wxMessageBox(res);	
+                            gaMessageBox(res, wxOK);	
 				continue;
 			}
 
@@ -665,11 +664,12 @@ bool goodanchorage_pi::sendRequest(double lat, double lon)
 	else
 	{
 		int httpCode = get.GetResponse();
-		wxMessageBox( _T("Unable to connect: ") +
-			getErrorText(get.GetError(),get.GetResponse()) +
-			_T("\n") +
-			wxString::Format(wxT("(Error %d, "),get.GetError())+
-			wxString::Format(wxT("HTTP %d)"), httpCode));
+		gaMessageBox( _T("Unable to connect: ") +
+                              getErrorText(get.GetError(),get.GetResponse()) +
+                              _T("\n") +
+                              wxString::Format(wxT("(Error %d, "),get.GetError())+
+                              wxString::Format(wxT("HTTP %d)"), httpCode),
+                    wxICON_ERROR);
 
 		isLoaded = false;
 		// catch 401/403, clear auth data
@@ -700,53 +700,53 @@ void goodanchorage_pi::_storeMarkerDb(GAMarker marker)
 			"(SELECT updated FROM anchor_point WHERE id = ?));";
 	sqlite3_stmt *stmt;
 	if ( sqlite3_prepare(gaDb, sql, -1, &stmt, 0) != SQLITE_OK) {
-		wxMessageBox(_T("Failed prepare to store Anchorage in local storage"));
+                gaMessageBox(_T("Failed prepare to store Anchorage in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 
 	if (sqlite3_bind_int(stmt, 1, marker.serverId) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind ID in local storage"));
+                gaMessageBox(_T("Failed to bind ID in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_double(stmt, 2, marker.serverLat) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind Latitude in local storage"));
+                gaMessageBox(_T("Failed to bind Latitude in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_double(stmt, 3, marker.serverLon) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind Longitude in local storage"));
+                gaMessageBox(_T("Failed to bind Longitude in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 4, marker.serverDeep) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind IsDeep in local storage"));
+            gaMessageBox(_T("Failed to bind IsDeep in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_text(stmt, 5, strdup(marker.serverTitle.utf8_str()), -1, SQLITE_STATIC) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind Title in local storage"));
+		gaMessageBox(_T("Failed to bind Title in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_text(stmt, 6, strdup(marker.serverPath.utf8_str()), -1, SQLITE_STATIC) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind Path in local storage"));
+		gaMessageBox(_T("Failed to bind Path in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 7, marker.serverId) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind ID in local storage"));
+		gaMessageBox(_T("Failed to bind ID in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 8, marker.serverId) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind ID in local storage"));
+		gaMessageBox(_T("Failed to bind ID in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
-		wxMessageBox(_T("Failed to save Anchorage in local storage"));
+		gaMessageBox(_T("Failed to save Anchorage in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
@@ -761,7 +761,7 @@ void goodanchorage_pi::_loadMarkersDb() {
 	sqlite3_stmt *stmt;
 	int rc = sqlite3_prepare_v2(gaDb, sql, -1, &stmt, 0);
 	if( rc != SQLITE_OK ){
-      wxMessageBox(wxString::Format(wxT("Failed to fetch data: %s"), sqlite3_errmsg(gaDb)));
+            gaMessageBox(wxString::Format(wxT("Failed to fetch data: %s"), sqlite3_errmsg(gaDb)), wxICON_ERROR);
 	}
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -821,11 +821,12 @@ bool goodanchorage_pi::sendRequestPlus(int id, GAMarker *marker, wxString &detai
 	}
 	else
 	{
-		wxMessageBox( _T("Unable to connect: ") +
-			getErrorText(get.GetError(),get.GetResponse()) +
-			_T("\n") +
-			wxString::Format(wxT("(Error %d, "),get.GetError())+
-			wxString::Format(wxT("HTTP %d)"),get.GetResponse()));
+		gaMessageBox( _T("Unable to connect: ") +
+                              getErrorText(get.GetError(),get.GetResponse()) +
+                              _T("\n") +
+                              wxString::Format(wxT("(Error %d, "),get.GetError())+
+                              wxString::Format(wxT("HTTP %d)"),get.GetResponse()),
+                              wxICON_ERROR);
 	}
 	 
 	wxDELETE(httpStream);
@@ -845,7 +846,7 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res, GAMarker *marker) {
 	// check for errors before retreiving values...
 	int numErrors = reader.Parse( res, &root );
 	if ( numErrors > 0  )  {
-		wxMessageBox(_T("!root.IsArray() ") + res);
+                gaMessageBox(_T("!root.IsArray() ") + res, wxICON_ERROR);
 		return wxEmptyString;
 	}
 			
@@ -879,8 +880,8 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res, GAMarker *marker) {
 					 
 		if ( !lat_lon.IsArray() ) 
 		{					
-			wxMessageBox(_T("!lat_lon.IsArray()) ") + res);						
-			return wxEmptyString;
+                    gaMessageBox(_T("!lat_lon.IsArray()) ") + res, wxICON_ERROR);
+                    return wxEmptyString;
 		}
 
 		double lat_i = lat_lon[0].AsDouble();
@@ -900,8 +901,8 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res, GAMarker *marker) {
 				
 		if ( !wp_lat_lon.IsArray() ) 
 		{					
-			wxMessageBox(_T("!wp_lat_lon.IsArray()) ") + res);						
-			return wxEmptyString;
+                        gaMessageBox(_T("!wp_lat_lon.IsArray()) ") + res, wxICON_ERROR);
+                        return wxEmptyString;
 		}
 		forPrint += _T("Safe Waypoint(s): ") ;
 				
@@ -1075,7 +1076,7 @@ wxString goodanchorage_pi::_parseMarkerJson(wxString res, GAMarker *marker) {
 	{
 		marker->serverPath = root[_T("path")].AsString();
 	}
-	//wxMessageBox(forPrint);
+	//gaMessageBox(forPrint);
 
 	return forPrint;
 }
@@ -1136,7 +1137,7 @@ bool CustomDialog::sendRequestAuth(wxString login, wxString password)
         wxString res;
         wxStringOutputStream out_stream(&res);
         httpStream->Read(out_stream);
-		// wxMessageBox(res);
+		// gaMessageBox(res);
 
 		wxJSONValue  root;
 		wxJSONReader reader;
@@ -1145,7 +1146,7 @@ bool CustomDialog::sendRequestAuth(wxString login, wxString password)
         // check for errors before retreiving values...
 		int numErrors = reader.Parse( res, &root );
 		if ( numErrors > 0  )  {
-			wxMessageBox(_T("reader  ERR0R:") + res);
+                        gaMessageBox(_T("reader  ERR0R:") + res, wxICON_ERROR);
 			return false;
 		}
 		
@@ -1172,11 +1173,12 @@ bool CustomDialog::sendRequestAuth(wxString login, wxString password)
     }
     else
     {
-		wxMessageBox( _T("Unable to connect: ") +
-			getErrorText(http.GetError(),http.GetResponse()) +
-			_T("\n") +
-			wxString::Format(wxT("(Error %d, "),http.GetError())+
-			wxString::Format(wxT("HTTP %d)"),http.GetResponse()));
+		gaMessageBox( _T("Unable to connect: ") +
+                              getErrorText(http.GetError(),http.GetResponse()) +
+                              _T("\n") +
+                              wxString::Format(wxT("(Error %d, "),http.GetError())+
+                              wxString::Format(wxT("HTTP %d)"),http.GetResponse()),
+                    wxICON_ERROR);
                 return false;
     }
 
@@ -1218,28 +1220,28 @@ void goodanchorage_pi::_storeMarkerJsonDb(int id, wxString json) {
 	char const *sql = "UPDATE anchor_point SET json = ?, updated = ? WHERE id = ?;";
 	sqlite3_stmt *stmt;
 	if ( sqlite3_prepare(gaDb, sql, -1, &stmt, 0) != SQLITE_OK) {
-		wxMessageBox(_T("Failed prepare to update Anchorage in local storage"));
+                gaMessageBox(_("Failed prepare to update Anchorage in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_text(stmt, 1, strdup(json.utf8_str()), json.length(), SQLITE_STATIC) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind JSON in local storage"));
+                gaMessageBox(_("Failed to bind JSON in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 2, wxGetUTCTime()) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind Updated in local storage"));
+                gaMessageBox(_("Failed to bind Updated in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	if (sqlite3_bind_int(stmt, 3, id) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind ID in local storage"));
+                gaMessageBox(_T("Failed to bind ID in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
 	
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
-		wxMessageBox(_T("Failed to update Anchorage in local storage"));
+                gaMessageBox(_T("Failed to update Anchorage in local storage"), wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return;
 	}
@@ -1256,13 +1258,15 @@ bool goodanchorage_pi::_loadMarkerDetailsDb(int id, GAMarker *marker, wxString &
 	sqlite3_stmt *stmt;
 	int rc = sqlite3_prepare_v2(gaDb, sql, -1, &stmt, 0);
 	if( rc != SQLITE_OK ){
-      wxMessageBox(wxString::Format(wxT("Failed to fetch Anchorage details: %s"), sqlite3_errmsg(gaDb)));
+            gaMessageBox(wxString::Format(wxT("Failed to fetch Anchorage details: %s"), sqlite3_errmsg(gaDb)),
+                wxICON_ERROR);
 	  sqlite3_finalize(stmt);
 	  return false;
 	}
 
 	if (sqlite3_bind_int(stmt, 1, id) != SQLITE_OK) {
-		wxMessageBox(_T("Failed to bind ID while loading locally stored anchorage"));
+            gaMessageBox(_T("Failed to bind ID while loading locally stored anchorage"),
+                wxICON_ERROR);
 		sqlite3_finalize(stmt);
 		return false;
 	}
