@@ -43,5 +43,6 @@ ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_GOODANCHORAGEPLUGIN} ${SRC_LSQLITE})
 
 INCLUDE("cmake/PluginInstall.cmake")
 INCLUDE("cmake/PluginSQLite.cmake")
+INCLUDE("cmake/PluginLocalization.cmake")
 INCLUDE("cmake/PluginPackage.cmake")
 
