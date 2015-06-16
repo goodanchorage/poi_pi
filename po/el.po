@@ -1,0 +1,109 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: opencpn\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-06-06 13:02-0500\n"
+"PO-Revision-Date: 2015-06-06 14:04-0400\n"
+"Last-Translator: nohal <pavel@kalian.cz>\n"
+"Language-Team: Greek\n"
+"Language: el_GR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: crowdin.com\n"
+"X-Crowdin-Project: opencpn\n"
+"X-Crowdin-Language: el\n"
+"X-Crowdin-File: /plugins/goodanchorage_pi/po/goodanchorage_pi.pot\n"
+
+#: src/goodanchorage_pi.cpp:130
+msgid "Good Anchorage"
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:134
+msgid "GoodAnchorage"
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:136
+msgid "Error locating plugin data directory.\n"
+"GoodAnchorage plugin will not run properly."
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:139
+msgid "Error opening local data store.\n"
+"GoodAnchorage plugin will run in ONLINE mode only."
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:143
+msgid "Error creating authentication file.\n"
+"GoodAnchorage plugin will not run properly."
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:168
+msgid "Failed to create GA data directory in "
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:211
+msgid "Failed to create local storage: "
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:285
+msgid "GoodAnchorage PlugIn for OpenCPN"
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:290
+msgid "GoodAnchorage PlugIn for OpenCPN\n\n"
+"Provides access to crowdsourced anchorages around the world.\n\n"
+"- Initial data download requires a working network connection and\n"
+"  a free GoodAnchorage.com account.\n"
+"- Afterwards, locally stored data can be used whenever offline.\n"
+"- To view a list of anchorages for an area activate toolbar icon\n"
+"  and DOUBLE-CLICK on the map.\n"
+"- To view anchorage details RIGHT-CLICK on a marker and select Properties.\n\n"
+"Your feedback is welcome! http://GoodAnchorage.com/contact"
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:331
+msgid "Switching to OFFLINE mode.\n"
+"Double-click on the map to load locally stored data\n"
+"or click on the toolbar icon to retry server access."
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:358
+msgid "Switching to OFFLINE mode."
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:363
+msgid "There are no locally stored details for this anchorage."
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:413
+msgid "No network detected, switching to OFFLINE mode."
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:426
+msgid "Welcome Aboard!\n\n"
+"Double-click on the map to load local anchorages.\n"
+"Right-click on a marker and select Properties to view details.\n"
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:613
+msgid "Data from server incomprehensible, check internet connection."
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:849
+msgid "Anchor data from server incomprehensible"
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:1224
+msgid "Failed prepare to update Anchorage in local storage"
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:1229
+msgid "Failed to bind JSON in local storage"
+msgstr ""
+
+#: src/goodanchorage_pi.cpp:1234
+msgid "Failed to bind Updated in local storage"
+msgstr ""
+
